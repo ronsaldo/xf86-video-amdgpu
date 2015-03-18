@@ -32,6 +32,14 @@
 #define GLAMOR_FOR_XORG  1
 #include <glamor.h>
 
+#ifndef CREATE_PIXMAP_USAGE_SHARED
+#define CREATE_PIXMAP_USAGE_SHARED AMDGPU_CREATE_PIXMAP_DRI2
+#endif
+
+#define AMDGPU_CREATE_PIXMAP_SHARED(usage) \
+	((usage) == AMDGPU_CREATE_PIXMAP_DRI2 || \
+	 (usage) == CREATE_PIXMAP_USAGE_SHARED)
+
 #ifndef GLAMOR_NO_DRI3
 #define GLAMOR_NO_DRI3 0
 #define glamor_fd_from_pixmap glamor_dri3_fd_from_pixmap
@@ -52,6 +60,7 @@ struct amdgpu_pixmap;
 
 Bool amdgpu_glamor_pre_init(ScrnInfoPtr scrn);
 Bool amdgpu_glamor_init(ScreenPtr screen);
+void amdgpu_glamor_screen_init(ScreenPtr screen);
 Bool amdgpu_glamor_create_screen_resources(ScreenPtr screen);
 void amdgpu_glamor_free_screen(int scrnIndex, int flags);
 

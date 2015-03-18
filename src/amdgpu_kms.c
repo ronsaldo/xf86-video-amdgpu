@@ -67,6 +67,7 @@ const OptionInfoRec AMDGPUOptions_KMS[] = {
 	{OPTION_ZAPHOD_HEADS, "ZaphodHeads", OPTV_STRING, {0}, FALSE},
 	{OPTION_ACCEL_METHOD, "AccelMethod", OPTV_STRING, {0}, FALSE},
 	{ OPTION_DRI3, "DRI3", OPTV_BOOLEAN, {0}, FALSE },
+	{OPTION_SHADOW_PRIMARY, "ShadowPrimary", OPTV_BOOLEAN, {0}, FALSE},
 	{-1, NULL, OPTV_NONE, {0}, FALSE}
 };
 
@@ -210,6 +211,134 @@ static void amdgpu_dirty_update(ScreenPtr screen)
 }
 #endif
 
+static Bool
+amdgpu_scanout_extents_intersect(BoxPtr extents, int x, int y, int w, int h)
+{
+	extents->x1 = max(extents->x1 - x, 0);
+	extents->y1 = max(extents->y1 - y, 0);
+	extents->x2 = min(extents->x2 - x, w);
+	extents->y2 = min(extents->y2 - y, h);
+
+	return (extents->x1 < extents->x2 && extents->y1 < extents->y2);
+}
+
+static void
+amdgpu_scanout_update_abort(ScrnInfoPtr scrn, void *event_data)
+{
+	xf86CrtcPtr xf86_crtc = event_data;
+	drmmode_crtc_private_ptr drmmode_crtc = xf86_crtc->driver_private;
+
+	drmmode_crtc->scanout_update_pending = FALSE;
+}
+
+static void
+amdgpu_scanout_update_handler(ScrnInfoPtr scrn, uint32_t frame, uint64_t usec,
+			      void *event_data)
+{
+	xf86CrtcPtr xf86_crtc = event_data;
+	drmmode_crtc_private_ptr drmmode_crtc = xf86_crtc->driver_private;
+	DamagePtr pDamage;
+	RegionPtr pRegion;
+	DrawablePtr pDraw;
+	ScreenPtr pScreen;
+	GCPtr gc;
+	BoxRec extents;
+
+	if (!drmmode_crtc->scanout.pixmap ||
+	    drmmode_crtc->dpms_mode != DPMSModeOn)
+		goto out;
+
+	pDamage = drmmode_crtc->scanout_damage;
+	if (!pDamage)
+		goto out;
+
+	pRegion = DamageRegion(pDamage);
+	if (!RegionNotEmpty(pRegion))
+		goto out;
+
+	pDraw = &drmmode_crtc->scanout.pixmap->drawable;
+	extents = *RegionExtents(pRegion);
+	if (!amdgpu_scanout_extents_intersect(&extents, xf86_crtc->x, xf86_crtc->y,
+					      pDraw->width, pDraw->height))
+		goto clear_damage;
+
+	pScreen = pDraw->pScreen;
+	gc = GetScratchGC(pDraw->depth, pScreen);
+
+	ValidateGC(pDraw, gc);
+	(*gc->ops->CopyArea)(&pScreen->GetScreenPixmap(pScreen)->drawable,
+			     pDraw, gc,
+			     xf86_crtc->x + extents.x1, xf86_crtc->y + extents.y1,
+			     extents.x2 - extents.x1, extents.y2 - extents.y1,
+			     extents.x1, extents.y1);
+	FreeScratchGC(gc);
+
+	amdgpu_glamor_flush(scrn);
+
+clear_damage:
+	RegionEmpty(pRegion);
+
+out:
+	drmmode_crtc->scanout_update_pending = FALSE;
+}
+
+static void
+amdgpu_scanout_update(xf86CrtcPtr xf86_crtc)
+{
+	drmmode_crtc_private_ptr drmmode_crtc = xf86_crtc->driver_private;
+	struct amdgpu_drm_queue_entry *drm_queue_entry;
+	ScrnInfoPtr scrn;
+	drmVBlank vbl;
+	DamagePtr pDamage;
+	RegionPtr pRegion;
+	DrawablePtr pDraw;
+	BoxRec extents;
+
+	if (drmmode_crtc->scanout_update_pending ||
+	    !drmmode_crtc->scanout.pixmap ||
+	    drmmode_crtc->dpms_mode != DPMSModeOn)
+		return;
+
+	pDamage = drmmode_crtc->scanout_damage;
+	if (!pDamage)
+		return;
+
+	pRegion = DamageRegion(pDamage);
+	if (!RegionNotEmpty(pRegion))
+		return;
+
+	pDraw = &drmmode_crtc->scanout.pixmap->drawable;
+	extents = *RegionExtents(pRegion);
+	if (!amdgpu_scanout_extents_intersect(&extents, xf86_crtc->x, xf86_crtc->y,
+					      pDraw->width, pDraw->height))
+		return;
+
+	scrn = xf86_crtc->scrn;
+	drm_queue_entry = amdgpu_drm_queue_alloc(scrn, AMDGPU_DRM_QUEUE_CLIENT_DEFAULT,
+						 AMDGPU_DRM_QUEUE_ID_DEFAULT,
+						 xf86_crtc,
+						 amdgpu_scanout_update_handler,
+						 amdgpu_scanout_update_abort);
+	if (!drm_queue_entry) {
+		xf86DrvMsg(scrn->scrnIndex, X_WARNING,
+			   "amdgpu_drm_queue_alloc failed for scanout update\n");
+		return;
+	}
+
+	vbl.request.type = DRM_VBLANK_RELATIVE | DRM_VBLANK_EVENT;
+	vbl.request.type |= amdgpu_populate_vbl_request_type(xf86_crtc);
+	vbl.request.sequence = 1;
+	vbl.request.signal = (unsigned long)drm_queue_entry;
+	if (drmWaitVBlank(AMDGPUPTR(scrn)->dri2.drm_fd, &vbl)) {
+		xf86DrvMsg(scrn->scrnIndex, X_WARNING,
+			   "drmWaitVBlank failed for scanout update: %s\n",
+			   strerror(errno));
+		amdgpu_drm_abort_entry(drm_queue_entry);
+		return;
+	}
+
+	drmmode_crtc->scanout_update_pending = TRUE;
+}
 static void AMDGPUBlockHandler_KMS(BLOCKHANDLER_ARGS_DECL)
 {
 	SCREEN_PTR(arg);
@@ -219,6 +348,14 @@ static void AMDGPUBlockHandler_KMS(BLOCKHANDLER_ARGS_DECL)
 	pScreen->BlockHandler = info->BlockHandler;
 	(*pScreen->BlockHandler) (BLOCKHANDLER_ARGS);
 	pScreen->BlockHandler = AMDGPUBlockHandler_KMS;
+
+	if (info->shadow_primary) {
+		xf86CrtcConfigPtr xf86_config = XF86_CRTC_CONFIG_PTR(pScrn);
+		int c;
+
+		for (c = 0; c < xf86_config->num_crtc; c++)
+			amdgpu_scanout_update(xf86_config->crtc[c]);
+	}
 
 	if (info->use_glamor)
 		amdgpu_glamor_flush(pScrn);
@@ -543,12 +680,28 @@ Bool AMDGPUPreInit_KMS(ScrnInfoPtr pScrn, int flags)
 		amdgpu_get_tile_config(pScrn);
 	}
 
+	if (info->use_glamor) {
+		info->shadow_primary =
+			xf86ReturnOptValBool(info->Options, OPTION_SHADOW_PRIMARY, FALSE);
+
+		if (info->shadow_primary)
+			xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, "ShadowPrimary enabled\n");
+	}
+
 	info->allowPageFlip = xf86ReturnOptValBool(info->Options,
 						   OPTION_PAGE_FLIP,
 						   TRUE);
-	xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-		   "KMS Pageflipping: %sabled\n",
-		   info->allowPageFlip ? "en" : "dis");
+	if (info->shadow_primary) {
+		    xf86DrvMsg(pScrn->scrnIndex,
+			       info->allowPageFlip ? X_WARNING : X_DEFAULT,
+			       "KMS Pageflipping: disabled%s\n",
+			       info->allowPageFlip ? " because of ShadowPrimary" : "");
+		    info->allowPageFlip = FALSE;
+	} else {
+		xf86DrvMsg(pScrn->scrnIndex, X_INFO,
+			   "KMS Pageflipping: %sabled\n",
+			   info->allowPageFlip ? "en" : "dis");
+	}
 
 	if (drmmode_pre_init(pScrn, &info->drmmode, pScrn->bitsPerPixel / 8) ==
 	    FALSE) {
@@ -993,6 +1146,7 @@ void AMDGPULeaveVT_KMS(VT_FUNC_ARGS_DECL)
 	drmDropMaster(info->dri2.drm_fd);
 
 	xf86RotateFreeShadow(pScrn);
+	drmmode_scanout_free(pScrn);
 
 	xf86_hide_cursors(pScrn);
 
@@ -1074,7 +1228,12 @@ static Bool amdgpu_setup_kernel_mem(ScreenPtr pScreen)
 
 	if (info->front_buffer == NULL) {
 		int pitch;
-		int hint = info->use_glamor ? 0 : AMDGPU_CREATE_PIXMAP_LINEAR;
+		int hint = 0;
+
+		if (info->shadow_primary)
+			hint = AMDGPU_CREATE_PIXMAP_LINEAR | AMDGPU_CREATE_PIXMAP_GTT;
+		else if (!info->use_glamor)
+			hint = AMDGPU_CREATE_PIXMAP_LINEAR;
 
 		info->front_buffer =
 			amdgpu_alloc_pixmap_bo(pScrn, pScrn->virtualX,

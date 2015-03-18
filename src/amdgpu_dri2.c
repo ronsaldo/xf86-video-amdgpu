@@ -116,6 +116,7 @@ static PixmapPtr fixup_glamor(DrawablePtr drawable, PixmapPtr pixmap)
 				   old->drawable.width,
 				   old->drawable.height,
 				   0, 0, priv->stride, NULL);
+	old->devPrivate.ptr = NULL;
 
 	return old;
 }

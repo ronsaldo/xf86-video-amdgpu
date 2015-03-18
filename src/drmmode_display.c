@@ -32,6 +32,8 @@
 #include <errno.h>
 #include <sys/ioctl.h>
 #include <time.h>
+#include "cursorstr.h"
+#include "damagestr.h"
 #include "micmap.h"
 #include "xf86cmap.h"
 #include "sarea.h"
@@ -302,17 +304,8 @@ void drmmode_copy_fb(ScrnInfoPtr pScrn, drmmode_ptr drmmode)
 	uint32_t size = pScrn->displayWidth * info->pixel_bytes * pScrn->virtualY;
 
 	/* memset the bo */
-	if (info->gbm) {
-		void *cpu_ptr = malloc(size);
-
-		if (cpu_ptr) {
-			memset(cpu_ptr, 0x00, size);
-			gbm_bo_write(info->front_buffer->bo.gbm, cpu_ptr, size);
-			free(cpu_ptr);
-		}
-	} else {
-		memset(info->front_buffer->cpu_ptr, 0x00, size);
-	}
+	amdgpu_bo_map(pScrn, info->front_buffer);
+	memset(info->front_buffer->cpu_ptr, 0x00, size);
 }
 
 static void
@@ -332,6 +325,26 @@ drmmode_crtc_scanout_destroy(drmmode_ptr drmmode,
 		scanout->bo = NULL;
 	}
 
+}
+
+void
+drmmode_scanout_free(ScrnInfoPtr scrn)
+{
+	xf86CrtcConfigPtr xf86_config = XF86_CRTC_CONFIG_PTR(scrn);
+	int c;
+
+	for (c = 0; c < xf86_config->num_crtc; c++) {
+		drmmode_crtc_private_ptr drmmode_crtc =
+			xf86_config->crtc[c]->driver_private;
+
+		drmmode_crtc_scanout_destroy(drmmode_crtc->drmmode,
+					     &drmmode_crtc->scanout);
+
+		if (drmmode_crtc->scanout_damage) {
+			DamageDestroy(drmmode_crtc->scanout_damage);
+			drmmode_crtc->scanout_damage = NULL;
+		}
+	}
 }
 
 static void *
@@ -354,6 +367,13 @@ drmmode_crtc_scanout_allocate(xf86CrtcPtr crtc,
 		return NULL;
 	}
 
+	if (scanout->bo) {
+		if (scanout->width == width && scanout->height == height)
+			return scanout->bo;
+
+		drmmode_crtc_scanout_destroy(drmmode, scanout);
+	}
+
 	scanout->bo = amdgpu_alloc_pixmap_bo(pScrn, width, height,
 					       pScrn->depth, 0,
 					       pScrn->bitsPerPixel, &pitch);
@@ -371,6 +391,8 @@ drmmode_crtc_scanout_allocate(xf86CrtcPtr crtc,
 		ErrorF("failed to add rotate fb\n");
 	}
 
+	scanout->width = width;
+	scanout->height = height;
 	return scanout->bo;
 }
 
@@ -380,7 +402,16 @@ drmmode_crtc_scanout_create(xf86CrtcPtr crtc,
                             void *data, int width, int height)
 {
 	ScrnInfoPtr pScrn = crtc->scrn;
+	drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
+	drmmode_ptr drmmode = drmmode_crtc->drmmode;
 	unsigned long rotate_pitch;
+
+	if (scanout->pixmap) {
+		if (scanout->width == width && scanout->height == height)
+			return scanout->pixmap;
+
+		drmmode_crtc_scanout_destroy(drmmode, scanout);
+	}
 
 	if (!data)
 		data = drmmode_crtc_scanout_allocate(crtc, scanout, width, height);
@@ -401,6 +432,13 @@ drmmode_crtc_scanout_create(xf86CrtcPtr crtc,
 
 }
 
+static void
+amdgpu_screen_damage_report(DamagePtr damage, RegionPtr region, void *closure)
+{
+	/* Only keep track of the extents */
+	RegionUninit(&damage->damage);
+	damage->damage.data = NULL;
+}
 
 static Bool
 drmmode_set_mode_major(xf86CrtcPtr crtc, DisplayModePtr mode,
@@ -460,6 +498,8 @@ drmmode_set_mode_major(xf86CrtcPtr crtc, DisplayModePtr mode,
 	}
 
 	if (mode) {
+		ScreenPtr pScreen = pScrn->pScreen;
+
 		for (i = 0; i < xf86_config->num_output; i++) {
 			xf86OutputPtr output = xf86_config->output[i];
 			drmmode_output_private_ptr drmmode_output;
@@ -486,11 +526,46 @@ drmmode_set_mode_major(xf86CrtcPtr crtc, DisplayModePtr mode,
 		if (crtc->randr_crtc && crtc->randr_crtc->scanout_pixmap) {
 			x = drmmode_crtc->prime_pixmap_x;
 			y = 0;
+
+			drmmode_crtc_scanout_destroy(drmmode, &drmmode_crtc->scanout);
 		} else
 #endif
 		if (drmmode_crtc->rotate.fb_id) {
 			fb_id = drmmode_crtc->rotate.fb_id;
 			x = y = 0;
+
+			drmmode_crtc_scanout_destroy(drmmode, &drmmode_crtc->scanout);
+		} else if (info->shadow_primary) {
+			drmmode_crtc_scanout_create(crtc,
+						    &drmmode_crtc->scanout,
+						    NULL, mode->HDisplay,
+						    mode->VDisplay);
+
+			if (drmmode_crtc->scanout.pixmap) {
+				RegionPtr pRegion;
+				BoxPtr pBox;
+
+				if (!drmmode_crtc->scanout_damage) {
+					drmmode_crtc->scanout_damage =
+						DamageCreate(amdgpu_screen_damage_report,
+							     NULL, DamageReportRawRegion,
+							     TRUE, pScreen, NULL);
+					DamageRegister(&pScreen->GetScreenPixmap(pScreen)->drawable,
+						       drmmode_crtc->scanout_damage);
+				}
+
+				pRegion = DamageRegion(drmmode_crtc->scanout_damage);
+				RegionUninit(pRegion);
+				pRegion->data = NULL;
+				pBox = RegionExtents(pRegion);
+				pBox->x1 = min(pBox->x1, x);
+				pBox->y1 = min(pBox->y1, y);
+				pBox->x2 = max(pBox->x2, x + mode->HDisplay);
+				pBox->y2 = max(pBox->y2, y + mode->VDisplay);
+
+				fb_id = drmmode_crtc->scanout.fb_id;
+				x = y = 0;
+			}
 		}
 		ret =
 		    drmModeSetCrtc(drmmode->fd,
@@ -1313,17 +1388,22 @@ static Bool drmmode_xf86crtc_resize(ScrnInfoPtr scrn, int width, int height)
 	drmmode_ptr drmmode = drmmode_crtc->drmmode;
 	AMDGPUInfoPtr info = AMDGPUPTR(scrn);
 	struct amdgpu_buffer *old_front = NULL;
-	Bool ret;
 	ScreenPtr screen = xf86ScrnToScreen(scrn);
 	uint32_t old_fb_id;
 	int i, pitch, old_width, old_height, old_pitch;
 	int cpp = info->pixel_bytes;
 	PixmapPtr ppix = screen->GetScreenPixmap(screen);
+	uint32_t bo_handle;
 	void *fb_shadow;
-	int hint = info->use_glamor ? 0 : AMDGPU_CREATE_PIXMAP_LINEAR;
+	int hint = 0;
 
 	if (scrn->virtualX == width && scrn->virtualY == height)
 		return TRUE;
+
+	if (info->shadow_primary)
+		hint = AMDGPU_CREATE_PIXMAP_LINEAR | AMDGPU_CREATE_PIXMAP_GTT;
+	else if (!info->use_glamor)
+		hint = AMDGPU_CREATE_PIXMAP_LINEAR;
 
 	xf86DrvMsg(scrn->scrnIndex, X_INFO,
 		   "Allocate new frame buffer %dx%d\n", width, height);
@@ -1356,35 +1436,26 @@ static Bool drmmode_xf86crtc_resize(ScrnInfoPtr scrn, int width, int height)
 	xf86DrvMsg(scrn->scrnIndex, X_INFO, " => pitch %d bytes\n", pitch);
 	scrn->displayWidth = pitch / cpp;
 
-	if (info->front_buffer->flags & AMDGPU_BO_FLAGS_GBM) {
-		union gbm_bo_handle bo_handle;
+	if (!amdgpu_bo_get_handle(info->front_buffer, &bo_handle)) {
+		xf86DrvMsg(scrn->scrnIndex, X_ERROR,
+			   "Failed to get front buffer handle\n");
+		goto fail;
+	}
 
-		bo_handle = gbm_bo_get_handle(info->front_buffer->bo.gbm);
-		ret = drmModeAddFB(drmmode->fd, width, height, scrn->depth,
-				   scrn->bitsPerPixel, pitch,
-				   bo_handle.u32, &drmmode->fb_id);
-		if (ret) {
-			goto fail;
-		}
+	if (drmModeAddFB(drmmode->fd, width, height, scrn->depth,
+			 scrn->bitsPerPixel, pitch,
+			 bo_handle, &drmmode->fb_id) != 0) {
+		xf86DrvMsg(scrn->scrnIndex, X_ERROR,
+			   "drmModeAddFB failed for front buffer\n");
+		goto fail;
+	}
 
+	if (info->use_glamor ||
+	    (info->front_buffer->flags & AMDGPU_BO_FLAGS_GBM)) {
 		amdgpu_set_pixmap_bo(ppix, info->front_buffer);
 		screen->ModifyPixmapHeader(ppix,
 					   width, height, -1, -1, pitch, info->front_buffer->cpu_ptr);
 	} else {
-		uint32_t bo_handle;
-
-		if (amdgpu_bo_export(info->front_buffer->bo.amdgpu,
-				     amdgpu_bo_handle_type_kms,
-				     &bo_handle)) {
-			goto fail;
-		}
-		ret = drmModeAddFB(drmmode->fd, width, height, scrn->depth,
-				   scrn->bitsPerPixel, pitch,
-				   bo_handle, &drmmode->fb_id);
-		if (ret) {
-			goto fail;
-		}
-
 		fb_shadow = calloc(1, pitch * scrn->virtualY);
 		if (fb_shadow == NULL)
 			goto fail;
@@ -1800,7 +1871,6 @@ Bool amdgpu_do_pageflip(ScrnInfoPtr scrn, ClientPtr client,
 			int ref_crtc_hw_id, amdgpu_drm_handler_proc handler,
 			amdgpu_drm_abort_proc abort)
 {
-	AMDGPUInfoPtr info = AMDGPUPTR(scrn);
 	xf86CrtcConfigPtr config = XF86_CRTC_CONFIG_PTR(scrn);
 	drmmode_crtc_private_ptr drmmode_crtc = config->crtc[0]->driver_private;
 	drmmode_ptr drmmode = drmmode_crtc->drmmode;
@@ -1813,9 +1883,9 @@ Bool amdgpu_do_pageflip(ScrnInfoPtr scrn, ClientPtr client,
 	union gbm_bo_handle bo_handle;
 	uint32_t handle;
 
-	if (info->front_buffer->flags & AMDGPU_BO_FLAGS_GBM) {
-		pitch = gbm_bo_get_stride(info->front_buffer->bo.gbm);
-		height = gbm_bo_get_height(info->front_buffer->bo.gbm);
+	if (new_front->flags & AMDGPU_BO_FLAGS_GBM) {
+		pitch = gbm_bo_get_stride(new_front->bo.gbm);
+		height = gbm_bo_get_height(new_front->bo.gbm);
 		bo_handle = gbm_bo_get_handle(new_front->bo.gbm);
 		handle = bo_handle.u32;
 	} else {

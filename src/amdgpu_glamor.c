@@ -146,25 +146,27 @@ amdgpu_glamor_create_textured_pixmap(PixmapPtr pixmap, struct amdgpu_pixmap *pri
 						 pixmap->devKind);
 }
 
-#ifndef CREATE_PIXMAP_USAGE_SHARED
-#define CREATE_PIXMAP_USAGE_SHARED AMDGPU_CREATE_PIXMAP_DRI2
-#endif
-
-#define AMDGPU_CREATE_PIXMAP_SHARED(usage) \
-	((usage) & AMDGPU_CREATE_PIXMAP_DRI2 || (usage) == CREATE_PIXMAP_USAGE_SHARED)
-
 static PixmapPtr
 amdgpu_glamor_create_pixmap(ScreenPtr screen, int w, int h, int depth,
 			    unsigned usage)
 {
 	ScrnInfoPtr scrn = xf86ScreenToScrn(screen);
+	AMDGPUInfoPtr info = AMDGPUPTR(scrn);
 	struct amdgpu_pixmap *priv;
 	PixmapPtr pixmap, new_pixmap = NULL;
 
 	if (!AMDGPU_CREATE_PIXMAP_SHARED(usage)) {
-		pixmap = glamor_create_pixmap(screen, w, h, depth, usage);
-		if (pixmap)
-			return pixmap;
+		if (info->shadow_primary) {
+			if (usage != CREATE_PIXMAP_USAGE_BACKING_PIXMAP)
+				return fbCreatePixmap(screen, w, h, depth, usage);
+
+			usage |= AMDGPU_CREATE_PIXMAP_LINEAR |
+				 AMDGPU_CREATE_PIXMAP_GTT;
+		} else {
+			pixmap = glamor_create_pixmap(screen, w, h, depth, usage);
+			if (pixmap)
+				return pixmap;
+		}
 	}
 
 	if (w > 32767 || h > 32767)
@@ -195,6 +197,8 @@ amdgpu_glamor_create_pixmap(ScreenPtr screen, int w, int h, int depth,
 
 		screen->ModifyPixmapHeader(pixmap, w, h, 0, 0, priv->stride,
 					   NULL);
+
+		pixmap->devPrivate.ptr = NULL;
 
 		if (!amdgpu_glamor_create_textured_pixmap(pixmap, priv))
 			goto fallback_glamor;
@@ -236,6 +240,13 @@ fallback_pixmap:
 static Bool amdgpu_glamor_destroy_pixmap(PixmapPtr pixmap)
 {
 	if (pixmap->refcnt == 1) {
+		if (pixmap->devPrivate.ptr) {
+			struct amdgpu_buffer *bo = amdgpu_get_pixmap_bo(pixmap);
+
+			if (bo)
+				amdgpu_bo_unmap(bo);
+		}
+
 		glamor_egl_destroy_textured_pixmap(pixmap);
 		amdgpu_set_pixmap_bo(pixmap, NULL);
 	}
@@ -289,6 +300,26 @@ amdgpu_glamor_set_shared_pixmap_backing(PixmapPtr pixmap, void *handle)
 Bool amdgpu_glamor_init(ScreenPtr screen)
 {
 	ScrnInfoPtr scrn = xf86ScreenToScrn(screen);
+	AMDGPUInfoPtr info = AMDGPUPTR(scrn);
+#ifdef RENDER
+#ifdef HAVE_FBGLYPHS
+	UnrealizeGlyphProcPtr SavedUnrealizeGlyph = NULL;
+#endif
+	PictureScreenPtr ps = NULL;
+
+	if (info->shadow_primary) {
+		ps = GetPictureScreenIfSet(screen);
+
+		if (ps) {
+#ifdef HAVE_FBGLYPHS
+			SavedUnrealizeGlyph = ps->UnrealizeGlyph;
+#endif
+			info->glamor.SavedGlyphs = ps->Glyphs;
+			info->glamor.SavedTriangles = ps->Triangles;
+			info->glamor.SavedTrapezoids = ps->Trapezoids;
+		}
+	}
+#endif /* RENDER */
 
 	if (!glamor_init(screen, GLAMOR_USE_EGL_SCREEN | GLAMOR_USE_SCREEN |
 			 GLAMOR_USE_PICTURE_SCREEN | GLAMOR_INVERTED_Y_AXIS |
@@ -309,6 +340,17 @@ Bool amdgpu_glamor_init(ScreenPtr screen)
 	if (!dixRequestPrivate(&amdgpu_pixmap_index, 0))
 #endif
 		return FALSE;
+
+	if (info->shadow_primary)
+		amdgpu_glamor_screen_init(screen);
+
+#if defined(RENDER) && defined(HAVE_FBGLYPHS)
+	/* For ShadowPrimary, we need fbUnrealizeGlyph instead of
+	 * glamor_unrealize_glyph
+	 */
+	if (ps)
+		ps->UnrealizeGlyph = SavedUnrealizeGlyph;
+#endif
 
 	screen->CreatePixmap = amdgpu_glamor_create_pixmap;
 	screen->DestroyPixmap = amdgpu_glamor_destroy_pixmap;

@@ -108,7 +108,8 @@ static PixmapPtr amdgpu_dri3_pixmap_from_fd(ScreenPtr screen,
 		return NULL;
 	}
 
-	pixmap = screen->CreatePixmap(screen, 0, 0, depth, 0);
+	pixmap = screen->CreatePixmap(screen, 0, 0, depth,
+				      AMDGPU_CREATE_PIXMAP_DRI2);
 	if (!pixmap)
 		return NULL;
 
