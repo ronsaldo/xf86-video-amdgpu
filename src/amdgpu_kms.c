@@ -333,8 +333,7 @@ static Bool AMDGPUPreInitAccel_KMS(ScrnInfoPtr pScrn)
 {
 	AMDGPUInfoPtr info = AMDGPUPTR(pScrn);
 
-	if (!xf86ReturnOptValBool(info->Options, OPTION_NOACCEL,
-				 info->ChipFamily == CHIP_FAMILY_HAWAII) &&
+	if (!xf86ReturnOptValBool(info->Options, OPTION_NOACCEL, false) &&
 		AMDGPUIsAccelWorking(pScrn)) {
 		Bool use_glamor = TRUE;
 #ifdef GBM_BO_USE_LINEAR
