@@ -237,18 +237,6 @@ amdgpu_flush_callback(CallbackListPtr * list,
 	}
 }
 
-static Bool AMDGPUIsAccelWorking(ScrnInfoPtr pScrn)
-{
-	AMDGPUEntPtr pAMDGPUEnt = AMDGPUEntPriv(pScrn);
-	uint32_t accel_working;
-
-	if (amdgpu_query_info(pAMDGPUEnt->pDev, AMDGPU_INFO_ACCEL_WORKING,
-			      sizeof(accel_working), &accel_working) != 0)
-		return FALSE;
-
-	return accel_working;
-}
-
 /* This is called by AMDGPUPreInit to set up the default visual */
 static Bool AMDGPUPreInitVisual(ScrnInfoPtr pScrn)
 {
@@ -333,8 +321,7 @@ static Bool AMDGPUPreInitAccel_KMS(ScrnInfoPtr pScrn)
 {
 	AMDGPUInfoPtr info = AMDGPUPTR(pScrn);
 
-	if (!xf86ReturnOptValBool(info->Options, OPTION_NOACCEL, false) &&
-		AMDGPUIsAccelWorking(pScrn)) {
+	if (!xf86ReturnOptValBool(info->Options, OPTION_NOACCEL, false)) {
 		Bool use_glamor = TRUE;
 #ifdef GBM_BO_USE_LINEAR
 		const char *accel_method;
