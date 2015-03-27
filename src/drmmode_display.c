@@ -688,17 +688,12 @@ void drmmode_crtc_hw_id(xf86CrtcPtr crtc)
 {
 	drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
 	ScrnInfoPtr pScrn = crtc->scrn;
-	AMDGPUInfoPtr info = AMDGPUPTR(pScrn);
-	struct drm_amdgpu_info ginfo;
+	AMDGPUEntPtr pAMDGPUEnt = AMDGPUEntPriv(pScrn);
 	int r;
 
-	memset(&ginfo, 0, sizeof(ginfo));
-	ginfo.return_pointer = (uintptr_t)&drmmode_crtc->hw_id;
-	ginfo.return_size = sizeof(drmmode_crtc->hw_id);
-	ginfo.query = AMDGPU_INFO_CRTC_FROM_ID;
-	ginfo.mode_crtc.id = drmmode_crtc->mode_crtc->crtc_id;
-	r = drmCommandWriteRead(info->dri2.drm_fd, DRM_AMDGPU_INFO, &ginfo,
-				sizeof(ginfo));
+	r = amdgpu_query_crtc_from_id(pAMDGPUEnt->pDev,
+				      drmmode_crtc->mode_crtc->crtc_id,
+				      &drmmode_crtc->hw_id);
 	if (r)
 		drmmode_crtc->hw_id = -1;
 }
