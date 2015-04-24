@@ -51,6 +51,15 @@ The default is to
 .B enable
 hardware acceleration.
 .TP
+.BI "Option \*qAccelMethod\*q \*q" string \*q
+Setting this option to
+.B none
+disables use of the glamor acceleration architecture. In that case, all 2D
+rendering is done by the CPU, but 3D and video hardware acceleration can still
+work. This is mainly useful for OpenGL driver bring-up.
+.br
+The default is to use glamor.
+.TP
 .BI "Option \*qZaphodHeads\*q \*q" string \*q
 Specify the RandR output(s) to use with zaphod mode for a particular driver
 instance.  If you use this option you must use this option for all instances
