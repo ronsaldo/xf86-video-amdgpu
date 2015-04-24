@@ -32,6 +32,22 @@
 #define GLAMOR_FOR_XORG  1
 #include <glamor.h>
 
+#ifndef GLAMOR_NO_DRI3
+#define GLAMOR_NO_DRI3 0
+#define glamor_fd_from_pixmap glamor_dri3_fd_from_pixmap
+#define glamor_pixmap_from_fd glamor_egl_dri3_pixmap_from_fd
+#endif
+
+#ifndef GLAMOR_INVERTED_Y_AXIS
+#define GLAMOR_INVERTED_Y_AXIS 0
+#endif
+#ifndef GLAMOR_USE_SCREEN
+#define GLAMOR_USE_SCREEN 0
+#endif
+#ifndef GLAMOR_USE_PICTURE_SCREEN
+#define GLAMOR_USE_PICTURE_SCREEN 0
+#endif
+
 Bool amdgpu_glamor_pre_init(ScrnInfoPtr scrn);
 Bool amdgpu_glamor_init(ScreenPtr screen);
 Bool amdgpu_glamor_create_screen_resources(ScreenPtr screen);
