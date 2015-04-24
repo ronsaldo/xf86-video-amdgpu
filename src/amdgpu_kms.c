@@ -332,16 +332,18 @@ static Bool AMDGPUPreInitWeight(ScrnInfoPtr pScrn)
 static Bool AMDGPUPreInitAccel_KMS(ScrnInfoPtr pScrn)
 {
 	AMDGPUInfoPtr info = AMDGPUPTR(pScrn);
-	const char *accel_method;
 
 	if (!xf86ReturnOptValBool(info->Options, OPTION_NOACCEL,
 				 info->ChipFamily == CHIP_FAMILY_HAWAII) &&
 		AMDGPUIsAccelWorking(pScrn)) {
 		Bool use_glamor = TRUE;
+#ifdef GBM_BO_USE_LINEAR
+		const char *accel_method;
 
 		accel_method = xf86GetOptValString(info->Options, OPTION_ACCEL_METHOD);
 		if ((accel_method && !strcmp(accel_method, "none")))
 			use_glamor = FALSE;
+#endif
 
 #ifdef DRI2
 		info->dri2.available = ! !xf86LoadSubModule(pScrn, "dri2");
