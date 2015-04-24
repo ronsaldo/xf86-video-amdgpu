@@ -81,6 +81,19 @@ PKG_CHECK_MODULES(XEXT, [xextproto >= 7.0.99.1],
                   HAVE_XEXTPROTO_71="no")
 AM_CONDITIONAL(HAVE_XEXTPROTO_71, [ test "$HAVE_XEXTPROTO_71" = "yes" ])
 
+# Define a configure option for an alternate X Server configuration directory
+# Section "OutputClass" is only supported as of xserver 1.16
+PKG_CHECK_EXISTS([xorg-server >= 1.16],
+		 [sysconfigdir=`$PKG_CONFIG --variable=sysconfigdir xorg-server`],
+		 [sysconfigdir=""])
+AC_ARG_WITH(xorg-conf-dir,
+            AS_HELP_STRING([--with-xorg-conf-dir=DIR],
+                           [Default xorg.conf.d directory [[default=from $PKG_CONFIG xorg-server]]]),
+            [configdir="$withval"],
+            [configdir="$sysconfigdir"])
+AC_SUBST(configdir)
+AM_CONDITIONAL(HAS_XORG_CONF_DIR, [test "x$sysconfigdir" != "x"])
+
 AC_ARG_ENABLE([udev],
 		AS_HELP_STRING([--disable-udev], [Disable libudev support [default=auto]]),
 		[enable_udev="$enableval"],
@@ -212,6 +225,7 @@ AC_CONFIG_FILES([
                 Makefile
                 src/Makefile
                 man/Makefile
+                conf/Makefile
 ])
 AC_OUTPUT
 
