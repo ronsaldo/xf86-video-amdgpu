@@ -29,11 +29,10 @@
 #endif
 
 #include <xf86.h>
-#define GLAMOR_FOR_XORG  1
-#include <glamor.h>
 
 #include "amdgpu_bo_helper.h"
 #include "amdgpu_pixmap.h"
+#include "amdgpu_glamor.h"
 
 #include <gbm.h>
 

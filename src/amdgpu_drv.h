@@ -51,8 +51,6 @@
 
 #include "fb.h"
 
-#include "amdgpu_glamor.h"
-
 /* Cursor Support */
 #include "xf86Cursor.h"
 

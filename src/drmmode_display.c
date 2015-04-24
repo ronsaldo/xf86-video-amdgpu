@@ -38,6 +38,7 @@
 
 #include "drmmode_display.h"
 #include "amdgpu_bo_helper.h"
+#include "amdgpu_glamor.h"
 #include "amdgpu_pixmap.h"
 
 /* DPMS */

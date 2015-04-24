@@ -29,6 +29,9 @@
 
 #include "xf86xv.h"
 
+#define GLAMOR_FOR_XORG  1
+#include <glamor.h>
+
 Bool amdgpu_glamor_pre_init(ScrnInfoPtr scrn);
 Bool amdgpu_glamor_init(ScreenPtr screen);
 Bool amdgpu_glamor_create_screen_resources(ScreenPtr screen);

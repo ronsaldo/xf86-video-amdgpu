@@ -9,6 +9,7 @@
 #include <math.h>
 
 #include "amdgpu_drv.h"
+#include "amdgpu_glamor.h"
 #include "amdgpu_probe.h"
 #include "amdgpu_video.h"
 #include "amdgpu_pixmap.h"

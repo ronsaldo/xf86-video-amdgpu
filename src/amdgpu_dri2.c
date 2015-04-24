@@ -31,6 +31,7 @@
 
 #include "amdgpu_drv.h"
 #include "amdgpu_dri2.h"
+#include "amdgpu_glamor.h"
 #include "amdgpu_video.h"
 #include "amdgpu_pixmap.h"
 
@@ -66,8 +67,6 @@
 #endif
 
 #define FALLBACK_SWAP_DELAY 16
-
-#include <glamor.h>
 
 typedef DRI2BufferPtr BufferPtr;
 

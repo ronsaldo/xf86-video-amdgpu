@@ -32,6 +32,7 @@
 #include <sys/ioctl.h>
 /* Driver data structures */
 #include "amdgpu_drv.h"
+#include "amdgpu_glamor.h"
 #include "amdgpu_probe.h"
 #include "micmap.h"
 
