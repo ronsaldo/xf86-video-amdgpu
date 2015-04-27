@@ -358,25 +358,6 @@ amdgpu_dri2_copy_region2(ScreenPtr pScreen,
 	(*gc->funcs->ChangeClip) (gc, CT_REGION, copy_clip, 0);
 	ValidateGC(dst_drawable, gc);
 
-	/* If this is a full buffer swap or frontbuffer flush, throttle on the
-	 * previous one
-	 */
-	if (dst_private->attachment == DRI2BufferFrontLeft) {
-		if (REGION_NUM_RECTS(region) == 1) {
-			BoxPtr extents = REGION_EXTENTS(pScreen, region);
-
-			if (extents->x1 == 0 && extents->y1 == 0 &&
-			    extents->x2 == drawable->width &&
-			    extents->y2 == drawable->height) {
-				char pixel[4];
-
-				/* XXX: This is a pretty big hammer... */
-				pScreen->GetImage(drawable, 0, 0, 1, 1,
-						  ZPixmap, ~0, pixel);
-			}
-		}
-	}
-
 	(*gc->ops->CopyArea) (src_drawable, dst_drawable, gc,
 			      0, 0, drawable->width, drawable->height, off_x,
 			      off_y);
