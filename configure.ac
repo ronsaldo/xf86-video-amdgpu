@@ -73,6 +73,7 @@ XORG_DRIVER_CHECK_EXT(DPMSExtension, xextproto)
 # Checks for libraries.
 PKG_CHECK_MODULES(LIBDRM, [libdrm >= 2.4.46])
 PKG_CHECK_MODULES(LIBDRM_AMDGPU, [libdrm_amdgpu])
+PKG_CHECK_MODULES(GBM, [gbm])
 
 # Obtain compiler/linker options for the driver dependencies
 PKG_CHECK_MODULES(XORG, [xorg-server >= 1.7 xproto fontsproto xf86driproto $REQUIRED_MODULES])

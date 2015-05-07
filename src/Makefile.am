@@ -26,11 +26,12 @@
 # _ladir passes a dummy rpath to libtool so the thing will actually link
 # TODO: -nostdlib/-Bstatic/-lgcc platform magic, not installing the .a, etc.
 
-amdgpu_drv_la_LIBADD = $(PCIACCESS_LIBS) $(LIBDRM_AMDGPU_LIBS)
+amdgpu_drv_la_LIBADD = $(PCIACCESS_LIBS) $(LIBDRM_AMDGPU_LIBS) $(GBM_LIBS)
 
 AMDGPU_KMS_SRCS=amdgpu_dri2.c amdgpu_kms.c drmmode_display.c amdgpu_bo_helper.c
 
 AM_CFLAGS = \
+            @GBM_CFLAGS@ \
             @LIBDRM_AMDGPU_CFLAGS@ \
             @XORG_CFLAGS@ \
             @LIBUDEV_CFLAGS@
