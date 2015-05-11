@@ -77,7 +77,7 @@ struct amdgpu_buffer *amdgpu_alloc_pixmap_bo(ScrnInfoPtr pScrn, int width,
 
 #ifdef CREATE_PIXMAP_USAGE_SHARED
 		if (usage_hint == CREATE_PIXMAP_USAGE_SHARED) {
-			/* XXX: Need to tell GBM to disable tiling in this case */
+			bo_use |= GBM_BO_USE_LINEAR;
 		}
 #endif
 
