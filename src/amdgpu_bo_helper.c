@@ -296,7 +296,11 @@ Bool amdgpu_share_pixmap_backing(struct amdgpu_buffer *bo, void **handle_p)
 {
 	int handle;
 
-	amdgpu_bo_export(bo->bo.amdgpu, amdgpu_bo_handle_type_dma_buf_fd,
+	if (bo->flags & AMDGPU_BO_FLAGS_GBM)
+		handle = gbm_bo_get_fd(bo->bo.gbm);
+	else
+		amdgpu_bo_export(bo->bo.amdgpu,
+			 amdgpu_bo_handle_type_dma_buf_fd,
 			 (uint32_t *)&handle);
 
 	*handle_p = (void *)(long)handle;
