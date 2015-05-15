@@ -60,8 +60,10 @@ Bool amdgpu_glamor_create_screen_resources(ScreenPtr screen)
 	if (!info->use_glamor)
 		return TRUE;
 
+#ifdef HAVE_GLAMOR_GLYPHS_INIT
 	if (!glamor_glyphs_init(screen))
 		return FALSE;
+#endif
 
 	bo_handle = gbm_bo_get_handle(info->front_buffer->bo.gbm);
 	if (!glamor_egl_create_textured_screen_ext(screen,
