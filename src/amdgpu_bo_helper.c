@@ -75,13 +75,13 @@ struct amdgpu_buffer *amdgpu_alloc_pixmap_bo(ScrnInfoPtr pScrn, int width,
 		if ( bitsPerPixel == pScrn->bitsPerPixel)
 			bo_use |= GBM_BO_USE_SCANOUT;
 
+#ifdef GBM_BO_USE_LINEAR
 #ifdef CREATE_PIXMAP_USAGE_SHARED
 		if (usage_hint == CREATE_PIXMAP_USAGE_SHARED) {
 			bo_use |= GBM_BO_USE_LINEAR;
 		}
 #endif
 
-#ifdef GBM_BO_USE_LINEAR
 		if (usage_hint & AMDGPU_CREATE_PIXMAP_LINEAR) {
 			bo_use |= GBM_BO_USE_LINEAR;
 		}
