@@ -123,9 +123,6 @@ int amdgpu_bo_map(ScrnInfoPtr pScrn, struct amdgpu_buffer *bo)
 	AMDGPUInfoPtr info = AMDGPUPTR(pScrn);
 	int ret = 0;
 
-	if (info->use_glamor)
-		return 0;
-
 	if (bo->flags & AMDGPU_BO_FLAGS_GBM) {
 		uint32_t handle, stride, height;
 		union drm_amdgpu_gem_mmap args;

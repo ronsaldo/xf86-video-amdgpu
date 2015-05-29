@@ -53,6 +53,7 @@ AM_CFLAGS += @LIBGLAMOR_CFLAGS@
 amdgpu_drv_la_LIBADD += @LIBGLAMOR_LIBS@
 amdgpu_drv_la_SOURCES += \
 	amdgpu_glamor.c \
+	amdgpu_glamor_wrappers.c \
 	amdgpu_pixmap.c
 
 EXTRA_DIST = \

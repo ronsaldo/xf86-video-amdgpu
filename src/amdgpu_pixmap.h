@@ -29,6 +29,9 @@
 #include "amdgpu_drv.h"
 
 struct amdgpu_pixmap {
+	uint_fast32_t gpu_read;
+	uint_fast32_t gpu_write;
+
 	struct amdgpu_buffer *bo;
 	int stride;
 };

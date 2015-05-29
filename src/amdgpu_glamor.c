@@ -324,8 +324,10 @@ void amdgpu_glamor_flush(ScrnInfoPtr pScrn)
 {
 	AMDGPUInfoPtr info = AMDGPUPTR(pScrn);
 
-	if (info->use_glamor)
+	if (info->use_glamor) {
 		glamor_block_handler(pScrn->pScreen);
+		info->gpu_flushed++;
+	}
 }
 
 XF86VideoAdaptorPtr amdgpu_glamor_xv_init(ScreenPtr pScreen, int num_adapt)

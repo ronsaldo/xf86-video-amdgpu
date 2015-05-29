@@ -200,6 +200,8 @@ typedef struct {
 	struct amdgpu_dri2 dri2;
 
 	/* accel */
+	uint_fast32_t gpu_flushed;
+	uint_fast32_t gpu_synced;
 	Bool use_glamor;
 
 	/* general */
@@ -231,6 +233,30 @@ typedef struct {
 	/* cursor size */
 	int cursor_w;
 	int cursor_h;
+
+	struct {
+		CreateGCProcPtr SavedCreateGC;
+		RegionPtr (*SavedCopyArea)(DrawablePtr, DrawablePtr, GCPtr,
+					   int, int, int, int, int, int);
+		void (*SavedPolyFillRect)(DrawablePtr, GCPtr, int, xRectangle*);
+		CloseScreenProcPtr SavedCloseScreen;
+		GetImageProcPtr SavedGetImage;
+		GetSpansProcPtr SavedGetSpans;
+		CreatePixmapProcPtr SavedCreatePixmap;
+		DestroyPixmapProcPtr SavedDestroyPixmap;
+		CopyWindowProcPtr SavedCopyWindow;
+		ChangeWindowAttributesProcPtr SavedChangeWindowAttributes;
+		BitmapToRegionProcPtr SavedBitmapToRegion;
+#ifdef RENDER
+		CompositeProcPtr SavedComposite;
+		TrianglesProcPtr SavedTriangles;
+		GlyphsProcPtr SavedGlyphs;
+		TrapezoidsProcPtr SavedTrapezoids;
+		AddTrapsProcPtr SavedAddTraps;
+		UnrealizeGlyphProcPtr SavedUnrealizeGlyph;
+#endif
+	} glamor;
+
 } AMDGPUInfoRec, *AMDGPUInfoPtr;
 
 
