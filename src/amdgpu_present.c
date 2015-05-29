@@ -227,7 +227,7 @@ amdgpu_present_check_flip(RRCrtcPtr crtc, WindowPtr window, PixmapPtr pixmap,
 		drmmode_crtc_private_ptr drmmode_crtc = xf86_crtc->driver_private;
 
 		if (!drmmode_crtc ||
-		    drmmode_crtc->rotate_buffer != NULL ||
+		    drmmode_crtc->rotate.bo != NULL ||
 		    drmmode_crtc->dpms_mode != DPMSModeOn)
 			return FALSE;
 	}

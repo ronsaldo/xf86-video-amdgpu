@@ -70,13 +70,18 @@ typedef struct {
 	amdgpu_drm_abort_proc abort;
 } drmmode_flipevtcarrier_rec, *drmmode_flipevtcarrier_ptr;
 
+struct drmmode_scanout {
+	struct amdgpu_buffer *bo;
+	PixmapPtr pixmap;
+	unsigned fb_id;
+};
+
 typedef struct {
 	drmmode_ptr drmmode;
 	drmModeCrtcPtr mode_crtc;
 	int hw_id;
 	struct amdgpu_buffer *cursor_buffer;
-	struct amdgpu_buffer *rotate_buffer;
-	unsigned rotate_fb_id;
+	struct drmmode_scanout rotate;
 	int dpms_mode;
 	CARD64 dpms_last_ust;
 	uint32_t dpms_last_seq;
