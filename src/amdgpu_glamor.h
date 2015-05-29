@@ -61,8 +61,6 @@ Bool
 amdgpu_glamor_create_textured_pixmap(PixmapPtr pixmap, struct amdgpu_pixmap *priv);
 void amdgpu_glamor_exchange_buffers(PixmapPtr src, PixmapPtr dst);
 
-Bool amdgpu_glamor_pixmap_is_offscreen(PixmapPtr pixmap);
-
 XF86VideoAdaptorPtr amdgpu_glamor_xv_init(ScreenPtr pScreen, int num_adapt);
 
 #endif /* AMDGPU_GLAMOR_H */

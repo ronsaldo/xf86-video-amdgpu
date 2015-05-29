@@ -144,12 +144,6 @@ amdgpu_glamor_create_textured_pixmap(PixmapPtr pixmap, struct amdgpu_pixmap *pri
 						 priv->stride);
 }
 
-Bool amdgpu_glamor_pixmap_is_offscreen(PixmapPtr pixmap)
-{
-	struct amdgpu_pixmap *priv = amdgpu_get_pixmap_private(pixmap);
-	return priv && priv->bo;
-}
-
 #ifndef CREATE_PIXMAP_USAGE_SHARED
 #define CREATE_PIXMAP_USAGE_SHARED AMDGPU_CREATE_PIXMAP_DRI2
 #endif
