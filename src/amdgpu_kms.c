@@ -323,7 +323,7 @@ static Bool AMDGPUPreInitAccel_KMS(ScrnInfoPtr pScrn)
 
 	if (!xf86ReturnOptValBool(info->Options, OPTION_NOACCEL, false)) {
 		Bool use_glamor = TRUE;
-#ifdef GBM_BO_USE_LINEAR
+#ifdef HAVE_GBM_BO_USE_LINEAR
 		const char *accel_method;
 
 		accel_method = xf86GetOptValString(info->Options, OPTION_ACCEL_METHOD);

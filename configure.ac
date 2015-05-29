@@ -158,6 +158,11 @@ if test "x$have_list_h" = xyes; then
 		   #include "list.h"])
 fi
 
+AC_CHECK_DECL(GBM_BO_USE_LINEAR,
+	      [AC_DEFINE(HAVE_GBM_BO_USE_LINEAR, 1, [Have GBM_BO_USE_LINEAR])], [],
+	      [#include <stdlib.h>
+	       #include <gbm.h>])
+
 CPPFLAGS="$SAVE_CPPFLAGS"
 
 PKG_CHECK_MODULES([PCIACCESS], [pciaccess >= 0.8.0])
