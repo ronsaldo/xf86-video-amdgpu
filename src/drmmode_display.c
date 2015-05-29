@@ -97,7 +97,8 @@ static PixmapPtr drmmode_create_bo_pixmap(ScrnInfoPtr pScrn,
 	ScreenPtr pScreen = pScrn->pScreen;
 	PixmapPtr pixmap;
 
-	pixmap = (*pScreen->CreatePixmap) (pScreen, 0, 0, depth, 0);
+	pixmap = (*pScreen->CreatePixmap)(pScreen, 0, 0, depth,
+					  AMDGPU_CREATE_PIXMAP_SCANOUT);
 	if (!pixmap)
 		return NULL;
 

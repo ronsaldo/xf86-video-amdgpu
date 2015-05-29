@@ -101,8 +101,9 @@ static inline struct amdgpu_buffer *amdgpu_get_pixmap_bo(PixmapPtr pPix)
 }
 
 enum {
-	AMDGPU_CREATE_PIXMAP_DRI2 = 0x08000000,
-	AMDGPU_CREATE_PIXMAP_LINEAR = 0x04000000
+	AMDGPU_CREATE_PIXMAP_DRI2    = 0x08000000,
+	AMDGPU_CREATE_PIXMAP_LINEAR  = 0x04000000,
+	AMDGPU_CREATE_PIXMAP_SCANOUT = 0x02000000,
 };
 
 extern Bool amdgpu_pixmap_init(ScreenPtr screen);
