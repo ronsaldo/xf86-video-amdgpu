@@ -126,28 +126,22 @@ Bool amdgpu_glamor_pre_init(ScrnInfoPtr scrn)
 	return TRUE;
 }
 
-Bool amdgpu_glamor_create_textured_pixmap(PixmapPtr pixmap)
+Bool
+amdgpu_glamor_create_textured_pixmap(PixmapPtr pixmap, struct amdgpu_pixmap *priv)
 {
 	ScrnInfoPtr scrn = xf86ScreenToScrn(pixmap->drawable.pScreen);
 	AMDGPUInfoPtr info = AMDGPUPTR(scrn);
-	struct amdgpu_pixmap *priv;
 	union gbm_bo_handle bo_handle;
 
 	if ((info->use_glamor) == 0)
 		return TRUE;
 
-	priv = amdgpu_get_pixmap_private(pixmap);
-	if (!priv->stride) {
+	if (!priv->stride)
 		priv->stride = pixmap->devKind;
-	}
 
 	bo_handle = gbm_bo_get_handle(priv->bo->bo.gbm);
-	if (glamor_egl_create_textured_pixmap(pixmap, bo_handle.u32,
-					      priv->stride)) {
-		return TRUE;
-	} else {
-		return FALSE;
-	}
+	return glamor_egl_create_textured_pixmap(pixmap, bo_handle.u32,
+						 priv->stride);
 }
 
 Bool amdgpu_glamor_pixmap_is_offscreen(PixmapPtr pixmap)
@@ -206,7 +200,7 @@ amdgpu_glamor_create_pixmap(ScreenPtr screen, int w, int h, int depth,
 		screen->ModifyPixmapHeader(pixmap, w, h, 0, 0, priv->stride,
 					   NULL);
 
-		if (!amdgpu_glamor_create_textured_pixmap(pixmap))
+		if (!amdgpu_glamor_create_textured_pixmap(pixmap, priv))
 			goto fallback_glamor;
 	}
 
@@ -280,7 +274,7 @@ amdgpu_glamor_set_shared_pixmap_backing(PixmapPtr pixmap, void *handle)
 	priv = amdgpu_get_pixmap_private(pixmap);
 	priv->stride = pixmap->devKind;
 
-	if (!amdgpu_glamor_create_textured_pixmap(pixmap)) {
+	if (!amdgpu_glamor_create_textured_pixmap(pixmap, priv)) {
 		xf86DrvMsg(scrn->scrnIndex, X_ERROR,
 			   "Failed to get PRIME drawable for glamor pixmap.\n");
 		return FALSE;

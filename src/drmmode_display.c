@@ -108,7 +108,8 @@ static PixmapPtr drmmode_create_bo_pixmap(ScrnInfoPtr pScrn,
 
 	amdgpu_set_pixmap_bo(pixmap, bo);
 
-	if (!amdgpu_glamor_create_textured_pixmap(pixmap)) {
+	if (!amdgpu_glamor_create_textured_pixmap(pixmap,
+						  amdgpu_get_pixmap_private(pixmap))) {
 		pScreen->DestroyPixmap(pixmap);
 		return NULL;
 	}

@@ -48,6 +48,8 @@
 #define GLAMOR_USE_PICTURE_SCREEN 0
 #endif
 
+struct amdgpu_pixmap;
+
 Bool amdgpu_glamor_pre_init(ScrnInfoPtr scrn);
 Bool amdgpu_glamor_init(ScreenPtr screen);
 Bool amdgpu_glamor_create_screen_resources(ScreenPtr screen);
@@ -55,7 +57,8 @@ void amdgpu_glamor_free_screen(int scrnIndex, int flags);
 
 void amdgpu_glamor_flush(ScrnInfoPtr pScrn);
 
-Bool amdgpu_glamor_create_textured_pixmap(PixmapPtr pixmap);
+Bool
+amdgpu_glamor_create_textured_pixmap(PixmapPtr pixmap, struct amdgpu_pixmap *priv);
 void amdgpu_glamor_exchange_buffers(PixmapPtr src, PixmapPtr dst);
 
 Bool amdgpu_glamor_pixmap_is_offscreen(PixmapPtr pixmap);
