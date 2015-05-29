@@ -402,7 +402,7 @@ drmmode_set_mode_major(xf86CrtcPtr crtc, DisplayModePtr mode,
 		fb_id = drmmode->fb_id;
 #ifdef AMDGPU_PIXMAP_SHARING
 		if (crtc->randr_crtc && crtc->randr_crtc->scanout_pixmap) {
-			x = drmmode_crtc->scanout_pixmap_x;
+			x = drmmode_crtc->prime_pixmap_x;
 			y = 0;
 		} else
 #endif
@@ -635,7 +635,7 @@ static Bool drmmode_set_scanout_pixmap(xf86CrtcPtr crtc, PixmapPtr ppix)
 			PixmapStopDirtyTracking(crtc->
 						randr_crtc->scanout_pixmap,
 						screenpix);
-		drmmode_crtc->scanout_pixmap_x = 0;
+		drmmode_crtc->prime_pixmap_x = 0;
 		return TRUE;
 	}
 
@@ -677,7 +677,7 @@ static Bool drmmode_set_scanout_pixmap(xf86CrtcPtr crtc, PixmapPtr ppix)
 		screen->width = screenpix->drawable.width = total_width;
 		screen->height = screenpix->drawable.height = max_height;
 	}
-	drmmode_crtc->scanout_pixmap_x = this_x;
+	drmmode_crtc->prime_pixmap_x = this_x;
 #ifdef HAS_DIRTYTRACKING2
 	PixmapStartDirtyTracking2(ppix, screenpix, 0, 0, this_x, 0);
 #else
