@@ -28,7 +28,8 @@
 
 amdgpu_drv_la_LIBADD = $(PCIACCESS_LIBS) $(LIBDRM_AMDGPU_LIBS) $(GBM_LIBS)
 
-AMDGPU_KMS_SRCS=amdgpu_dri2.c amdgpu_kms.c drmmode_display.c amdgpu_bo_helper.c
+AMDGPU_KMS_SRCS=amdgpu_bo_helper.c amdgpu_dri2.c amdgpu_drm_queue.c amdgpu_kms.c \
+	drmmode_display.c
 
 AM_CFLAGS = \
             @GBM_CFLAGS@ \
@@ -57,6 +58,7 @@ amdgpu_drv_la_SOURCES += \
 EXTRA_DIST = \
 	compat-api.h \
 	amdgpu_bo_helper.h \
+	amdgpu_drm_queue.h \
 	amdgpu_glamor.h \
 	amdgpu_drv.h \
 	amdgpu_list.h \

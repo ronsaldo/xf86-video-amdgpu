@@ -32,6 +32,7 @@
 #include <sys/ioctl.h>
 /* Driver data structures */
 #include "amdgpu_drv.h"
+#include "amdgpu_drm_queue.h"
 #include "amdgpu_glamor.h"
 #include "amdgpu_probe.h"
 #include "micmap.h"
@@ -529,6 +530,8 @@ Bool AMDGPUPreInit_KMS(ScrnInfoPtr pScrn, int flags)
 	if (!AMDGPUPreInitAccel_KMS(pScrn))
 		goto fail;
 
+	amdgpu_drm_queue_init();
+
 	AMDGPUSetupCapabilities(pScrn);
 
 	/* don't enable tiling if accel is not enabled */
@@ -696,6 +699,7 @@ static Bool AMDGPUCloseScreen_KMS(CLOSE_SCREEN_ARGS_DECL)
 		       "AMDGPUCloseScreen\n");
 
 	drmmode_uevent_fini(pScrn, &info->drmmode);
+	amdgpu_drm_queue_close(pScrn);
 
 	DeleteCallback(&FlushCallback, amdgpu_flush_callback, pScrn);
 
