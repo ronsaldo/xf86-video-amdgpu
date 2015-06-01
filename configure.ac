@@ -76,7 +76,7 @@ PKG_CHECK_MODULES(LIBDRM_AMDGPU, [libdrm_amdgpu])
 PKG_CHECK_MODULES(GBM, [gbm])
 
 # Obtain compiler/linker options for the driver dependencies
-PKG_CHECK_MODULES(XORG, [xorg-server >= 1.7 xproto fontsproto xf86driproto $REQUIRED_MODULES])
+PKG_CHECK_MODULES(XORG, [xorg-server >= 1.8 xproto fontsproto xf86driproto $REQUIRED_MODULES])
 PKG_CHECK_MODULES(XEXT, [xextproto >= 7.0.99.1],
                   HAVE_XEXTPROTO_71="yes"; AC_DEFINE(HAVE_XEXTPROTO_71, 1, [xextproto 7.1 available]),
                   HAVE_XEXTPROTO_71="no")
@@ -145,18 +145,11 @@ else
 fi
 AM_CONDITIONAL(GLAMOR, test x$GLAMOR != xno)
 
-AC_CHECK_HEADERS([list.h],
-		 [have_list_h="yes"], [have_list_h="no"],
-		 [#include <X11/Xdefs.h>
-		  #include "xorg-server.h"])
-
-if test "x$have_list_h" = xyes; then
-    AC_CHECK_DECL(xorg_list_init,
-		  [AC_DEFINE(HAVE_XORG_LIST, 1, [Have xorg_list API])], [],
-		  [#include <X11/Xdefs.h>
-		   #include "xorg-server.h"
-		   #include "list.h"])
-fi
+AC_CHECK_DECL(xorg_list_init,
+	      [AC_DEFINE(HAVE_XORG_LIST, 1, [Have xorg_list API])], [],
+	      [#include <X11/Xdefs.h>
+	      #include "xorg-server.h"
+	      #include "list.h"])
 
 AC_CHECK_DECL(GBM_BO_USE_LINEAR,
 	      [AC_DEFINE(HAVE_GBM_BO_USE_LINEAR, 1, [Have GBM_BO_USE_LINEAR])], [],

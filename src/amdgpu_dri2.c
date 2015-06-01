@@ -47,7 +47,6 @@
 
 #include "amdgpu_version.h"
 
-#if HAVE_LIST_H
 #include "list.h"
 #if !HAVE_XORG_LIST
 #define xorg_list			list
@@ -55,11 +54,6 @@
 #define xorg_list_add			list_add
 #define xorg_list_del			list_del
 #define xorg_list_for_each_entry	list_for_each_entry
-#endif
-#endif
-
-#if DRI2INFOREC_VERSION >= 4 && HAVE_LIST_H
-#define USE_DRI2_SCHEDULING
 #endif
 
 #if DRI2INFOREC_VERSION >= 9
@@ -372,8 +366,6 @@ amdgpu_dri2_copy_region(DrawablePtr pDraw, RegionPtr pRegion,
 	return amdgpu_dri2_copy_region2(pDraw->pScreen, pDraw, pRegion,
 					pDstBuffer, pSrcBuffer);
 }
-
-#ifdef USE_DRI2_SCHEDULING
 
 enum DRI2FrameEventType {
 	DRI2_SWAP,
@@ -1446,17 +1438,13 @@ blit_fallback:
 	return TRUE;
 }
 
-#endif /* USE_DRI2_SCHEDULING */
-
 Bool amdgpu_dri2_screen_init(ScreenPtr pScreen)
 {
 	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
 	AMDGPUInfoPtr info = AMDGPUPTR(pScrn);
 	DRI2InfoRec dri2_info = { 0 };
-#ifdef USE_DRI2_SCHEDULING
 	const char *driverNames[2];
 	Bool scheduling_works = TRUE;
-#endif
 
 	if (!info->dri2.available)
 		return FALSE;
@@ -1471,7 +1459,6 @@ Bool amdgpu_dri2_screen_init(ScreenPtr pScreen)
 	dri2_info.DestroyBuffer = amdgpu_dri2_destroy_buffer;
 	dri2_info.CopyRegion = amdgpu_dri2_copy_region;
 
-#ifdef USE_DRI2_SCHEDULING
 	if (info->drmmode.mode_res->count_crtcs > 2) {
 #ifdef DRM_CAP_VBLANK_HIGH_CRTC
 		uint64_t cap_value;
@@ -1532,7 +1519,6 @@ Bool amdgpu_dri2_screen_init(ScreenPtr pScreen)
 
 		DRI2InfoCnt++;
 	}
-#endif
 
 #if DRI2INFOREC_VERSION >= 9
 	dri2_info.version = 9;
@@ -1550,11 +1536,9 @@ void amdgpu_dri2_close_screen(ScreenPtr pScreen)
 	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
 	AMDGPUInfoPtr info = AMDGPUPTR(pScrn);
 
-#ifdef USE_DRI2_SCHEDULING
 	if (--DRI2InfoCnt == 0)
 		DeleteCallback(&ClientStateCallback,
 			       amdgpu_dri2_client_state_changed, 0);
-#endif
 
 	DRI2CloseScreen(pScreen);
 	drmFree(info->dri2.device_name);
