@@ -1228,7 +1228,6 @@ static int amdgpu_dri2_schedule_swap(ClientPtr client, DrawablePtr draw,
 	drmVBlank vbl;
 	int ret, flip = 0;
 	DRI2FrameEventPtr swap_info = NULL;
-	enum DRI2FrameEventType swap_type = DRI2_SWAP;
 	CARD64 current_msc;
 	BoxRec box;
 	RegionRec region;
@@ -1254,6 +1253,7 @@ static int amdgpu_dri2_schedule_swap(ClientPtr client, DrawablePtr draw,
 	if (!swap_info)
 		goto blit_fallback;
 
+	swap_info->type = DRI2_SWAP;
 	swap_info->drawable_id = draw->id;
 	swap_info->client = client;
 	swap_info->event_complete = func;
@@ -1293,9 +1293,7 @@ static int amdgpu_dri2_schedule_swap(ClientPtr client, DrawablePtr draw,
 		xf86DrvMsg(scrn->scrnIndex, X_WARNING,
 			   "first get vblank counter failed: %s\n",
 			   strerror(errno));
-		*target_msc = 0;
-		amdgpu_dri2_schedule_event(FALLBACK_SWAP_DELAY, swap_info);
-		return TRUE;
+		goto blit_fallback;
 	}
 
 	current_msc =
@@ -1304,13 +1302,11 @@ static int amdgpu_dri2_schedule_swap(ClientPtr client, DrawablePtr draw,
 
 	/* Flips need to be submitted one frame before */
 	if (can_flip(scrn, draw, front, back)) {
-		swap_type = DRI2_FLIP;
+		swap_info->type = DRI2_FLIP;
 		flip = 1;
 	}
 
-	swap_info->type = swap_type;
-
-	/* Correct target_msc by 'flip' if swap_type == DRI2_FLIP.
+	/* Correct target_msc by 'flip' if swap_info->type == DRI2_FLIP.
 	 * Do it early, so handling of different timing constraints
 	 * for divisor, remainder and msc vs. target_msc works.
 	 */
@@ -1347,10 +1343,7 @@ static int amdgpu_dri2_schedule_swap(ClientPtr client, DrawablePtr draw,
 			xf86DrvMsg(scrn->scrnIndex, X_WARNING,
 				   "divisor 0 get vblank counter failed: %s\n",
 				   strerror(errno));
-			*target_msc = 0;
-			amdgpu_dri2_schedule_event(FALLBACK_SWAP_DELAY,
-						   swap_info);
-			return TRUE;
+			goto blit_fallback;
 		}
 
 		*target_msc = vbl.reply.sequence + flip;
@@ -1397,9 +1390,7 @@ static int amdgpu_dri2_schedule_swap(ClientPtr client, DrawablePtr draw,
 		xf86DrvMsg(scrn->scrnIndex, X_WARNING,
 			   "final get vblank counter failed: %s\n",
 			   strerror(errno));
-		*target_msc = 0;
-		amdgpu_dri2_schedule_event(FALLBACK_SWAP_DELAY, swap_info);
-		return TRUE;
+		goto blit_fallback;
 	}
 
 	/* Adjust returned value for 1 fame pageflip offset of flip > 0 */
@@ -1410,22 +1401,23 @@ static int amdgpu_dri2_schedule_swap(ClientPtr client, DrawablePtr draw,
 	return TRUE;
 
 blit_fallback:
-	box.x1 = 0;
-	box.y1 = 0;
-	box.x2 = draw->width;
-	box.y2 = draw->height;
-	REGION_INIT(pScreen, &region, &box, 0);
-
-	amdgpu_dri2_copy_region(draw, &region, front, back);
-
-	DRI2SwapComplete(client, draw, 0, 0, 0, DRI2_BLIT_COMPLETE, func, data);
 	if (swap_info) {
-		ListDelDRI2ClientEvents(swap_info->client, &swap_info->link);
-		free(swap_info);
-	}
+		swap_info->type = DRI2_SWAP;
+		amdgpu_dri2_schedule_event(FALLBACK_SWAP_DELAY, swap_info);
+	} else {
+		box.x1 = 0;
+		box.y1 = 0;
+		box.x2 = draw->width;
+		box.y2 = draw->height;
+		REGION_INIT(pScreen, &region, &box, 0);
 
-	amdgpu_dri2_unref_buffer(front);
-	amdgpu_dri2_unref_buffer(back);
+		amdgpu_dri2_copy_region(draw, &region, front, back);
+
+		DRI2SwapComplete(client, draw, 0, 0, 0, DRI2_BLIT_COMPLETE, func, data);
+
+		amdgpu_dri2_unref_buffer(front);
+		amdgpu_dri2_unref_buffer(back);
+	}
 
 	*target_msc = 0;	/* offscreen, so zero out target vblank count */
 	return TRUE;
