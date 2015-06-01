@@ -1391,46 +1391,52 @@ static const xf86CrtcConfigFuncsRec drmmode_xf86crtc_config_funcs = {
 };
 
 static void
-drmmode_vblank_handler(int fd, unsigned int frame, unsigned int tv_sec,
-		       unsigned int tv_usec, void *event_data)
+drmmode_flip_free(drmmode_flipevtcarrier_ptr flipcarrier)
 {
-	amdgpu_dri2_frame_event_handler(frame, tv_sec, tv_usec, event_data);
+	drmmode_flipdata_ptr flipdata = flipcarrier->flipdata;
+
+	free(flipcarrier);
+
+	if (--flipdata->flip_count > 0)
+		return;
+
+	/* Release framebuffer */
+	drmModeRmFB(flipdata->drmmode->fd, flipdata->old_fb_id);
+
+	free(flipdata);
 }
 
 static void
-drmmode_flip_handler(int fd, unsigned int frame, unsigned int tv_sec,
-		     unsigned int tv_usec, void *event_data)
+drmmode_flip_abort(ScrnInfoPtr scrn, void *event_data)
 {
 	drmmode_flipevtcarrier_ptr flipcarrier = event_data;
 	drmmode_flipdata_ptr flipdata = flipcarrier->flipdata;
-	drmmode_ptr drmmode = flipdata->drmmode;
+
+	if (flipdata->flip_count == 1)
+		flipcarrier->abort(scrn, flipdata->event_data);
+
+	drmmode_flip_free(flipcarrier);
+}
+
+static void
+drmmode_flip_handler(ScrnInfoPtr scrn, uint32_t frame, uint64_t usec, void *event_data)
+{
+	drmmode_flipevtcarrier_ptr flipcarrier = event_data;
+	drmmode_flipdata_ptr flipdata = flipcarrier->flipdata;
 
 	/* Is this the event whose info shall be delivered to higher level? */
 	if (flipcarrier->dispatch_me) {
 		/* Yes: Cache msc, ust for later delivery. */
 		flipdata->fe_frame = frame;
-		flipdata->fe_tv_sec = tv_sec;
-		flipdata->fe_tv_usec = tv_usec;
+		flipdata->fe_usec = usec;
 	}
-	free(flipcarrier);
-
-	/* Last crtc completed flip? */
-	flipdata->flip_count--;
-	if (flipdata->flip_count > 0)
-		return;
-
-	/* Release framebuffer */
-	drmModeRmFB(drmmode->fd, flipdata->old_fb_id);
-
-	if (flipdata->event_data == NULL)
-		return;
 
 	/* Deliver cached msc, ust from reference crtc to flip event handler */
-	amdgpu_dri2_flip_event_handler(flipdata->fe_frame, flipdata->fe_tv_sec,
-				       flipdata->fe_tv_usec,
-				       flipdata->event_data);
+	if (flipdata->event_data && flipdata->flip_count == 1)
+		flipcarrier->handler(scrn, flipdata->fe_frame, flipdata->fe_usec,
+				     flipdata->event_data);
 
-	free(flipdata);
+	drmmode_flip_free(flipcarrier);
 }
 
 static void drm_wakeup_handler(pointer data, int err, pointer p)
@@ -1475,8 +1481,8 @@ Bool drmmode_pre_init(ScrnInfoPtr pScrn, drmmode_ptr drmmode, int cpp)
 	xf86InitialConfiguration(pScrn, TRUE);
 
 	drmmode->event_context.version = DRM_EVENT_CONTEXT_VERSION;
-	drmmode->event_context.vblank_handler = drmmode_vblank_handler;
-	drmmode->event_context.page_flip_handler = drmmode_flip_handler;
+	drmmode->event_context.vblank_handler = amdgpu_drm_queue_handler;
+	drmmode->event_context.page_flip_handler = amdgpu_drm_queue_handler;
 
 	return TRUE;
 }
@@ -1743,8 +1749,10 @@ void drmmode_uevent_fini(ScrnInfoPtr scrn, drmmode_ptr drmmode)
 #endif
 }
 
-Bool amdgpu_do_pageflip(ScrnInfoPtr scrn, struct amdgpu_buffer *new_front,
-			void *data, int ref_crtc_hw_id)
+Bool amdgpu_do_pageflip(ScrnInfoPtr scrn, ClientPtr client,
+			struct amdgpu_buffer *new_front, uint64_t id, void *data,
+			int ref_crtc_hw_id, amdgpu_drm_handler_proc handler,
+			amdgpu_drm_abort_proc abort)
 {
 	AMDGPUInfoPtr info = AMDGPUPTR(scrn);
 	xf86CrtcConfigPtr config = XF86_CRTC_CONFIG_PTR(scrn);
@@ -1754,7 +1762,8 @@ Bool amdgpu_do_pageflip(ScrnInfoPtr scrn, struct amdgpu_buffer *new_front,
 	int i, old_fb_id;
 	int height, emitted = 0;
 	drmmode_flipdata_ptr flipdata;
-	drmmode_flipevtcarrier_ptr flipcarrier;
+	drmmode_flipevtcarrier_ptr flipcarrier = NULL;
+	struct amdgpu_drm_queue_entry *drm_queue = 0;
 	union gbm_bo_handle bo_handle;
 	uint32_t handle;
 
@@ -1823,10 +1832,22 @@ Bool amdgpu_do_pageflip(ScrnInfoPtr scrn, struct amdgpu_buffer *new_front,
 		flipcarrier->dispatch_me =
 		    (drmmode_crtc->hw_id == ref_crtc_hw_id);
 		flipcarrier->flipdata = flipdata;
+		flipcarrier->handler = handler;
+		flipcarrier->abort = abort;
 
-		if (drmModePageFlip
-		    (drmmode->fd, drmmode_crtc->mode_crtc->crtc_id,
-		     drmmode->fb_id, DRM_MODE_PAGE_FLIP_EVENT, flipcarrier)) {
+		drm_queue = amdgpu_drm_queue_alloc(scrn, client, id,
+						   flipcarrier,
+						   drmmode_flip_handler,
+						   drmmode_flip_abort);
+		if (!drm_queue) {
+			xf86DrvMsg(scrn->scrnIndex, X_WARNING,
+				   "Allocating DRM queue event entry failed.\n");
+			goto error_undo;
+		}
+
+		if (drmModePageFlip(drmmode->fd, drmmode_crtc->mode_crtc->crtc_id,
+				    drmmode->fb_id, DRM_MODE_PAGE_FLIP_EVENT,
+				    drm_queue)) {
 			xf86DrvMsg(scrn->scrnIndex, X_WARNING,
 				   "flip queue failed: %s\n", strerror(errno));
 			free(flipcarrier);
@@ -1841,6 +1862,11 @@ Bool amdgpu_do_pageflip(ScrnInfoPtr scrn, struct amdgpu_buffer *new_front,
 	return TRUE;
 
 error_undo:
+	if (drm_queue)
+		amdgpu_drm_abort_entry(drm_queue);
+	else
+		drmmode_flip_abort(scrn, flipcarrier);
+
 	drmModeRmFB(drmmode->fd, drmmode->fb_id);
 	drmmode->fb_id = old_fb_id;
 

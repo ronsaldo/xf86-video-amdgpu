@@ -43,12 +43,6 @@ struct amdgpu_dri2 {
 Bool amdgpu_dri2_screen_init(ScreenPtr pScreen);
 void amdgpu_dri2_close_screen(ScreenPtr pScreen);
 
-int drmmode_get_crtc_id(xf86CrtcPtr crtc);
-void amdgpu_dri2_frame_event_handler(unsigned int frame, unsigned int tv_sec,
-				     unsigned int tv_usec, void *event_data);
-void amdgpu_dri2_flip_event_handler(unsigned int frame, unsigned int tv_sec,
-				    unsigned int tv_usec, void *event_data);
-
 #else
 
 static inline Bool amdgpu_dri2_screen_init(ScreenPtr pScreen)
@@ -58,37 +52,6 @@ static inline Bool amdgpu_dri2_screen_init(ScreenPtr pScreen)
 
 static inline void amdgpu_dri2_close_screen(ScreenPtr pScreen)
 {
-}
-
-static inline void
-amdgpu_dri2_dummy_event_handler(unsigned int frame, unsigned int tv_sec,
-				unsigned int tv_usec, void *event_data,
-				const char *name)
-{
-	static Bool warned;
-
-	if (!warned) {
-		ErrorF("%s called but DRI2 disabled at build time\n", name);
-		warned = TRUE;
-	}
-
-	free(event_data);
-}
-
-static inline void
-amdgpu_dri2_frame_event_handler(unsigned int frame, unsigned int tv_sec,
-				unsigned int tv_usec, void *event_data)
-{
-	amdgpu_dri2_dummy_event_handler(frame, tv_sec, tv_usec, event_data,
-					__func__);
-}
-
-static inline void
-amdgpu_dri2_flip_event_handler(unsigned int frame, unsigned int tv_sec,
-			       unsigned int tv_usec, void *event_data)
-{
-	amdgpu_dri2_dummy_event_handler(frame, tv_sec, tv_usec, event_data,
-					__func__);
 }
 
 #endif

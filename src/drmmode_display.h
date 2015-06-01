@@ -32,6 +32,7 @@
 #include "libudev.h"
 #endif
 
+#include "amdgpu_drm_queue.h"
 #include "amdgpu_probe.h"
 #include "amdgpu.h"
 
@@ -59,13 +60,14 @@ typedef struct {
 	int flip_count;
 	void *event_data;
 	unsigned int fe_frame;
-	unsigned int fe_tv_sec;
-	unsigned int fe_tv_usec;
+	uint64_t fe_usec;
 } drmmode_flipdata_rec, *drmmode_flipdata_ptr;
 
 typedef struct {
 	drmmode_flipdata_ptr flipdata;
 	Bool dispatch_me;
+	amdgpu_drm_handler_proc handler;
+	amdgpu_drm_abort_proc abort;
 } drmmode_flipevtcarrier_rec, *drmmode_flipevtcarrier_ptr;
 
 typedef struct {
@@ -117,9 +119,12 @@ extern Bool drmmode_setup_colormap(ScreenPtr pScreen, ScrnInfoPtr pScrn);
 extern void drmmode_uevent_init(ScrnInfoPtr scrn, drmmode_ptr drmmode);
 extern void drmmode_uevent_fini(ScrnInfoPtr scrn, drmmode_ptr drmmode);
 
+extern int drmmode_get_crtc_id(xf86CrtcPtr crtc);
 extern int drmmode_get_pitch_align(ScrnInfoPtr scrn, int bpe);
-Bool amdgpu_do_pageflip(ScrnInfoPtr scrn, struct amdgpu_buffer *new_front,
-			void *data, int ref_crtc_hw_id);
+Bool amdgpu_do_pageflip(ScrnInfoPtr scrn, ClientPtr client,
+			struct amdgpu_buffer *new_front, uint64_t id, void *data,
+			int ref_crtc_hw_id, amdgpu_drm_handler_proc handler,
+			amdgpu_drm_abort_proc abort);
 int drmmode_get_current_ust(int drm_fd, CARD64 * ust);
 
 #endif
