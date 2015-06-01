@@ -59,6 +59,7 @@ EXTRA_DIST = \
 	amdgpu_bo_helper.h \
 	amdgpu_glamor.h \
 	amdgpu_drv.h \
+	amdgpu_list.h \
 	amdgpu_probe.h \
 	amdgpu_version.h \
 	amdgpu_video.h \

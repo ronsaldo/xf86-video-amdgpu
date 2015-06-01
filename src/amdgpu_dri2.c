@@ -47,14 +47,7 @@
 
 #include "amdgpu_version.h"
 
-#include "list.h"
-#if !HAVE_XORG_LIST
-#define xorg_list			list
-#define xorg_list_init			list_init
-#define xorg_list_add			list_add
-#define xorg_list_del			list_del
-#define xorg_list_for_each_entry	list_for_each_entry
-#endif
+#include "amdgpu_list.h"
 
 #if DRI2INFOREC_VERSION >= 9
 #define USE_DRI2_PRIME
