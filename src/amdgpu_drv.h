@@ -140,7 +140,8 @@ typedef enum {
 	OPTION_SUBPIXEL_ORDER,
 #endif
 	OPTION_ZAPHOD_HEADS,
-	OPTION_ACCEL_METHOD
+	OPTION_ACCEL_METHOD,
+	OPTION_DRI3,
 } AMDGPUOpts;
 
 #define AMDGPU_VSYNC_TIMEOUT	20000	/* Maximum wait for VSYNC (in usecs) */
@@ -232,6 +233,9 @@ typedef struct {
 	int cursor_h;
 } AMDGPUInfoRec, *AMDGPUInfoPtr;
 
+
+/* amdgpu_dri3.c */
+Bool amdgpu_dri3_screen_init(ScreenPtr screen);
 
 /* amdgpu_present.c */
 Bool amdgpu_present_screen_init(ScreenPtr screen);

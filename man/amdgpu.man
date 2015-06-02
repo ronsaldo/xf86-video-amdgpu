@@ -70,6 +70,10 @@ For example:
 Option \*qZaphodHeads\*q \*qLVDS,VGA-0\*q
 will assign xrandr outputs LVDS and VGA-0 to this instance of the driver.
 .TP
+.BI "Option \*qDRI3\*q \*q" boolean \*q
+Enable the DRI3 extension. The default is
+.B off.
+.TP
 .BI "Option \*qEnablePageFlip\*q \*q" boolean \*q
 Enable DRI2 page flipping.  The default is
 .B on.

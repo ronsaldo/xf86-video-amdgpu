@@ -66,6 +66,7 @@ const OptionInfoRec AMDGPUOptions_KMS[] = {
 	{OPTION_SUBPIXEL_ORDER, "SubPixelOrder", OPTV_ANYSTR, {0}, FALSE},
 	{OPTION_ZAPHOD_HEADS, "ZaphodHeads", OPTV_STRING, {0}, FALSE},
 	{OPTION_ACCEL_METHOD, "AccelMethod", OPTV_STRING, {0}, FALSE},
+	{ OPTION_DRI3, "DRI3", OPTV_BOOLEAN, {0}, FALSE },
 	{-1, NULL, OPTV_NONE, {0}, FALSE}
 };
 
@@ -738,6 +739,8 @@ Bool AMDGPUScreenInit_KMS(SCREEN_INIT_ARGS_DECL)
 	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
 	AMDGPUInfoPtr info = AMDGPUPTR(pScrn);
 	int subPixelOrder = SubPixelUnknown;
+	MessageType from;
+	Bool value;
 	char *s;
 	void *front_ptr;
 	int ret;
@@ -827,8 +830,21 @@ Bool AMDGPUScreenInit_KMS(SCREEN_INIT_ARGS_DECL)
 	}
 #endif
 
-	if (amdgpu_sync_init(pScreen))
-		amdgpu_present_screen_init(pScreen);
+	value = FALSE;
+	if (xf86GetOptValBool(info->Options, OPTION_DRI3, &value))
+		from = X_CONFIG;
+	else
+		from = X_DEFAULT;
+
+	if (value) {
+		value = amdgpu_sync_init(pScreen) &&
+			amdgpu_present_screen_init(pScreen) &&
+			amdgpu_dri3_screen_init(pScreen);
+
+		if (!value)
+			from = X_WARNING;
+	}
+	xf86DrvMsg(pScrn->scrnIndex, from, "DRI3 %sabled\n", value ? "en" : "dis");
 
 	pScrn->vtSema = TRUE;
 	xf86SetBackingStore(pScreen);
