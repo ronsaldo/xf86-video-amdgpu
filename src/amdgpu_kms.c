@@ -827,7 +827,8 @@ Bool AMDGPUScreenInit_KMS(SCREEN_INIT_ARGS_DECL)
 	}
 #endif
 
-	amdgpu_sync_init(pScreen);
+	if (amdgpu_sync_init(pScreen))
+		amdgpu_present_screen_init(pScreen);
 
 	pScrn->vtSema = TRUE;
 	xf86SetBackingStore(pScreen);

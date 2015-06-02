@@ -162,6 +162,12 @@ AC_CHECK_HEADERS([misyncshm.h], [], [],
 	          #include <xorg-server.h>
 		  #include <screenint.h>])
 
+AC_CHECK_HEADERS([present.h], [], [],
+		 [#include <X11/Xmd.h>
+		 #include <X11/Xproto.h>
+		 #include <X11/X.h>
+		 #include "xorg-server.h"])
+
 CPPFLAGS="$SAVE_CPPFLAGS"
 
 PKG_CHECK_MODULES([PCIACCESS], [pciaccess >= 0.8.0])

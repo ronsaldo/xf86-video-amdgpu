@@ -233,6 +233,9 @@ typedef struct {
 } AMDGPUInfoRec, *AMDGPUInfoPtr;
 
 
+/* amdgpu_present.c */
+Bool amdgpu_present_screen_init(ScreenPtr screen);
+
 /* amdgpu_sync.c */
 extern Bool amdgpu_sync_init(ScreenPtr screen);
 extern void amdgpu_sync_close(ScreenPtr screen);
