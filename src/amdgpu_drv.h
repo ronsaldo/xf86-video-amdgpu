@@ -88,6 +88,8 @@
 #include "simple_list.h"
 #include "amdpciids.h"
 
+struct _SyncFence;
+
 #ifndef MAX
 #define MAX(a,b) ((a)>(b)?(a):(b))
 #endif
@@ -185,6 +187,9 @@ typedef struct {
 
 	void (*BlockHandler) (BLOCKHANDLER_ARGS_DECL);
 
+	void (*CreateFence) (ScreenPtr pScreen, struct _SyncFence *pFence,
+			     Bool initially_triggered);
+
 	int pix24bpp;		/* Depth of pixmap for 24bpp fb      */
 	Bool dac6bits;		/* Use 6 bit DAC?                    */
 
@@ -227,6 +232,10 @@ typedef struct {
 	int cursor_h;
 } AMDGPUInfoRec, *AMDGPUInfoPtr;
 
+
+/* amdgpu_sync.c */
+extern Bool amdgpu_sync_init(ScreenPtr screen);
+extern void amdgpu_sync_close(ScreenPtr screen);
 
 /* amdgpu_video.c */
 extern void AMDGPUInitVideo(ScreenPtr pScreen);

@@ -156,6 +156,12 @@ AC_CHECK_DECL(GBM_BO_USE_LINEAR,
 	      [#include <stdlib.h>
 	       #include <gbm.h>])
 
+AC_CHECK_HEADERS([misyncshm.h], [], [],
+                 [#include <X11/Xdefs.h>
+	          #include <X11/Xfuncproto.h>
+	          #include <xorg-server.h>
+		  #include <screenint.h>])
+
 CPPFLAGS="$SAVE_CPPFLAGS"
 
 PKG_CHECK_MODULES([PCIACCESS], [pciaccess >= 0.8.0])

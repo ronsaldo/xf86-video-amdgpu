@@ -703,6 +703,8 @@ static Bool AMDGPUCloseScreen_KMS(CLOSE_SCREEN_ARGS_DECL)
 
 	DeleteCallback(&FlushCallback, amdgpu_flush_callback, pScrn);
 
+	amdgpu_sync_close(pScreen);
+
 	drmDropMaster(info->dri2.drm_fd);
 
 	drmmode_fini(pScrn, &info->drmmode);
@@ -824,6 +826,8 @@ Bool AMDGPUScreenInit_KMS(SCREEN_INIT_ARGS_DECL)
 		PictureSetSubpixelOrder(pScreen, subPixelOrder);
 	}
 #endif
+
+	amdgpu_sync_init(pScreen);
 
 	pScrn->vtSema = TRUE;
 	xf86SetBackingStore(pScreen);
