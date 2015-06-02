@@ -27,7 +27,31 @@
 #include <gbm.h>
 #include "amdgpu_drv.h"
 #include "amdgpu_bo_helper.h"
+#include "amdgpu_glamor.h"
 #include "amdgpu_pixmap.h"
+
+static uint32_t
+amdgpu_get_gbm_format(int depth, int bitsPerPixel)
+{
+	switch (depth) {
+#ifdef GBM_FORMAT_R8
+	case 8:
+		return GBM_FORMAT_R8;
+#endif
+	case 16:
+		return GBM_FORMAT_RGB565;
+	case 32:
+		return GBM_FORMAT_ARGB8888;
+	case 24:
+		if (bitsPerPixel == 32)
+			return GBM_FORMAT_XRGB8888;
+		/* fall through */
+	default:
+		ErrorF("%s: Unsupported depth/bpp %d/%d\n", __func__,
+		       depth, bitsPerPixel);
+		return ~0U;
+	}
+}
 
 /* Calculate appropriate pitch for a pixmap and allocate a BO that can hold it.
  */
@@ -40,31 +64,10 @@ struct amdgpu_buffer *amdgpu_alloc_pixmap_bo(ScrnInfoPtr pScrn, int width,
 
 	if (info->gbm) {
 		uint32_t bo_use = GBM_BO_USE_RENDERING;
-		uint32_t gbm_format;
+		uint32_t gbm_format = amdgpu_get_gbm_format(depth, bitsPerPixel);
 
-		switch (depth) {
-#ifdef GBM_FORMAT_R8
-		case 8:
-			gbm_format = GBM_FORMAT_R8;
-			break;
-#endif
-		case 16:
-			gbm_format = GBM_FORMAT_RGB565;
-			break;
-		case 32:
-			gbm_format = GBM_FORMAT_ARGB8888;
-			break;
-		case 24:
-			if (bitsPerPixel == 32) {
-				gbm_format = GBM_FORMAT_XRGB8888;
-				break;
-			}
-			/* fall through */
-		default:
-			ErrorF("%s: Unsupported depth/bpp %d/%d\n", __func__,
-			       depth, bitsPerPixel);
+		if (gbm_format == ~0U)
 			return NULL;
-		}
 
 		pixmap_buffer = (struct amdgpu_buffer *)calloc(1, sizeof(struct amdgpu_buffer));
 		if (!pixmap_buffer) {
@@ -310,10 +313,63 @@ Bool amdgpu_share_pixmap_backing(struct amdgpu_buffer *bo, void **handle_p)
 Bool amdgpu_set_shared_pixmap_backing(PixmapPtr ppix, void *fd_handle)
 {
 	ScrnInfoPtr pScrn = xf86ScreenToScrn(ppix->drawable.pScreen);
+	AMDGPUInfoPtr info = AMDGPUPTR(pScrn);
 	AMDGPUEntPtr pAMDGPUEnt = AMDGPUEntPriv(pScrn);
 	struct amdgpu_buffer *pixmap_buffer = NULL;
 	int ihandle = (int)(long)fd_handle;
 	uint32_t size = ppix->devKind * ppix->drawable.height;
+
+	if (info->gbm) {
+		struct amdgpu_pixmap *priv;
+		struct gbm_import_fd_data data;
+		uint32_t bo_use = GBM_BO_USE_RENDERING;
+
+		data.format = amdgpu_get_gbm_format(ppix->drawable.depth,
+						    ppix->drawable.bitsPerPixel);
+		if (data.format == ~0U)
+			return FALSE;
+
+		priv = calloc(1, sizeof(struct amdgpu_pixmap));
+		if (!priv)
+			return FALSE;
+
+		priv->bo = calloc(1, sizeof(struct amdgpu_buffer));
+		if (!priv->bo) {
+			free(priv);
+			return FALSE;
+		}
+		priv->bo->ref_count = 1;
+
+		data.fd = ihandle;
+		data.width = ppix->drawable.width;
+		data.height = ppix->drawable.height;
+		data.stride = ppix->devKind;
+
+		if (ppix->drawable.bitsPerPixel == pScrn->bitsPerPixel)
+			bo_use |= GBM_BO_USE_SCANOUT;
+
+		priv->bo->bo.gbm = gbm_bo_import(info->gbm, GBM_BO_IMPORT_FD,
+						 &data, bo_use);
+		if (!priv->bo->bo.gbm) {
+			free(priv->bo);
+			free(priv);
+			return FALSE;
+		}
+
+		priv->bo->flags |= AMDGPU_BO_FLAGS_GBM;
+
+#ifdef USE_GLAMOR
+		if (info->use_glamor &&
+		    !amdgpu_glamor_create_textured_pixmap(ppix, priv)) {
+			free(priv->bo);
+			free(priv);
+			return FALSE;
+		}
+#endif
+
+		amdgpu_set_pixmap_private(ppix, priv);
+		return TRUE;
+	}
 
 	pixmap_buffer = amdgpu_gem_bo_open_prime(pAMDGPUEnt->pDev, ihandle, size);
 	if (!pixmap_buffer) {
