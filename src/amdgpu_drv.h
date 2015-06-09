@@ -143,6 +143,7 @@ typedef enum {
 	OPTION_ACCEL_METHOD,
 	OPTION_DRI3,
 	OPTION_SHADOW_PRIMARY,
+	OPTION_TEAR_FREE,
 } AMDGPUOpts;
 
 #define AMDGPU_VSYNC_TIMEOUT	20000	/* Maximum wait for VSYNC (in usecs) */
@@ -205,6 +206,7 @@ typedef struct {
 	uint_fast32_t gpu_synced;
 	Bool use_glamor;
 	Bool shadow_primary;
+	Bool tear_free;
 
 	/* general */
 	OptionInfoPtr Options;
