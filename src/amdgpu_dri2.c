@@ -109,14 +109,15 @@ static PixmapPtr fixup_glamor(DrawablePtr drawable, PixmapPtr pixmap)
 	/* And redirect the pixmap to the new bo (for 3D). */
 	glamor_egl_exchange_buffers(old, pixmap);
 	amdgpu_set_pixmap_private(old, priv);
-	screen->DestroyPixmap(pixmap);
 	old->refcnt++;
 
 	screen->ModifyPixmapHeader(old,
 				   old->drawable.width,
 				   old->drawable.height,
-				   0, 0, priv->stride, NULL);
+				   0, 0, pixmap->devKind, NULL);
 	old->devPrivate.ptr = NULL;
+
+	screen->DestroyPixmap(pixmap);
 
 	return old;
 }

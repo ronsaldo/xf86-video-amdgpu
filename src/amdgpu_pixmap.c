@@ -53,6 +53,8 @@ amdgpu_pixmap_create(ScreenPtr screen, int w, int h, int depth,	unsigned usage)
 		return pixmap;
 
 	if (w && h) {
+		int stride;
+
 		priv = calloc(1, sizeof(struct amdgpu_pixmap));
 		if (priv == NULL)
 			goto fallback_pixmap;
@@ -62,8 +64,8 @@ amdgpu_pixmap_create(ScreenPtr screen, int w, int h, int depth,	unsigned usage)
 		if (!info->use_glamor)
 			usage |= AMDGPU_CREATE_PIXMAP_LINEAR;
 		priv->bo = amdgpu_alloc_pixmap_bo(scrn, w, h, depth, usage,
-						pixmap->drawable.bitsPerPixel,
-						&priv->stride);
+						  pixmap->drawable.bitsPerPixel,
+						  &stride);
 		if (!priv->bo)
 			goto fallback_priv;
 
@@ -74,9 +76,8 @@ amdgpu_pixmap_create(ScreenPtr screen, int w, int h, int depth,	unsigned usage)
 			goto fallback_bo;
 		}
 
-		screen->ModifyPixmapHeader(pixmap, w, h,
-				0, 0, priv->stride,
-				priv->bo->cpu_ptr);
+		screen->ModifyPixmapHeader(pixmap, w, h, 0, 0, stride,
+					   priv->bo->cpu_ptr);
 	}
 
 	return pixmap;

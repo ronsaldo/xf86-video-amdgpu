@@ -136,9 +136,6 @@ amdgpu_glamor_create_textured_pixmap(PixmapPtr pixmap, struct amdgpu_pixmap *pri
 	if ((info->use_glamor) == 0)
 		return TRUE;
 
-	if (!priv->stride)
-		priv->stride = pixmap->devKind;
-
 	if (!amdgpu_bo_get_handle(priv->bo, &bo_handle))
 		return FALSE;
 
@@ -183,20 +180,21 @@ amdgpu_glamor_create_pixmap(ScreenPtr screen, int w, int h, int depth,
 		return pixmap;
 
 	if (w && h) {
+		int stride;
+
 		priv = calloc(1, sizeof(struct amdgpu_pixmap));
 		if (priv == NULL)
 			goto fallback_pixmap;
 
 		priv->bo = amdgpu_alloc_pixmap_bo(scrn, w, h, depth, usage,
 						  pixmap->drawable.bitsPerPixel,
-						  &priv->stride);
+						  &stride);
 		if (!priv->bo)
 			goto fallback_priv;
 
 		amdgpu_set_pixmap_private(pixmap, priv);
 
-		screen->ModifyPixmapHeader(pixmap, w, h, 0, 0, priv->stride,
-					   NULL);
+		screen->ModifyPixmapHeader(pixmap, w, h, 0, 0, stride, NULL);
 
 		pixmap->devPrivate.ptr = NULL;
 
@@ -279,7 +277,6 @@ amdgpu_glamor_set_shared_pixmap_backing(PixmapPtr pixmap, void *handle)
 		return FALSE;
 
 	priv = amdgpu_get_pixmap_private(pixmap);
-	priv->stride = pixmap->devKind;
 
 	if (!amdgpu_glamor_create_textured_pixmap(pixmap, priv)) {
 		xf86DrvMsg(scrn->scrnIndex, X_ERROR,
@@ -290,7 +287,7 @@ amdgpu_glamor_set_shared_pixmap_backing(PixmapPtr pixmap, void *handle)
 	screen->ModifyPixmapHeader(pixmap,
 				   pixmap->drawable.width,
 				   pixmap->drawable.height,
-				   0, 0, priv->stride, NULL);
+				   0, 0, 0, NULL);
 
 	return TRUE;
 }
