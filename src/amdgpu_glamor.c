@@ -55,7 +55,7 @@ Bool amdgpu_glamor_create_screen_resources(ScreenPtr screen)
 {
 	ScrnInfoPtr scrn = xf86ScreenToScrn(screen);
 	AMDGPUInfoPtr info = AMDGPUPTR(scrn);
-	union gbm_bo_handle bo_handle;
+	uint32_t bo_handle;
 
 	if (!info->use_glamor)
 		return TRUE;
@@ -65,9 +65,9 @@ Bool amdgpu_glamor_create_screen_resources(ScreenPtr screen)
 		return FALSE;
 #endif
 
-	bo_handle = gbm_bo_get_handle(info->front_buffer->bo.gbm);
-	if (!glamor_egl_create_textured_screen_ext(screen,
-						   bo_handle.u32,
+	if (!amdgpu_bo_get_handle(info->front_buffer, &bo_handle) ||
+	    !glamor_egl_create_textured_screen_ext(screen,
+						   bo_handle,
 						   scrn->displayWidth *
 						   info->pixel_bytes, NULL)) {
 		return FALSE;
@@ -131,7 +131,7 @@ amdgpu_glamor_create_textured_pixmap(PixmapPtr pixmap, struct amdgpu_pixmap *pri
 {
 	ScrnInfoPtr scrn = xf86ScreenToScrn(pixmap->drawable.pScreen);
 	AMDGPUInfoPtr info = AMDGPUPTR(scrn);
-	union gbm_bo_handle bo_handle;
+	uint32_t bo_handle;
 
 	if ((info->use_glamor) == 0)
 		return TRUE;
@@ -139,9 +139,11 @@ amdgpu_glamor_create_textured_pixmap(PixmapPtr pixmap, struct amdgpu_pixmap *pri
 	if (!priv->stride)
 		priv->stride = pixmap->devKind;
 
-	bo_handle = gbm_bo_get_handle(priv->bo->bo.gbm);
-	return glamor_egl_create_textured_pixmap(pixmap, bo_handle.u32,
-						 priv->stride);
+	if (!amdgpu_bo_get_handle(priv->bo, &bo_handle))
+		return FALSE;
+
+	return glamor_egl_create_textured_pixmap(pixmap, bo_handle,
+						 pixmap->devKind);
 }
 
 #ifndef CREATE_PIXMAP_USAGE_SHARED

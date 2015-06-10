@@ -118,6 +118,17 @@ struct amdgpu_buffer *amdgpu_alloc_pixmap_bo(ScrnInfoPtr pScrn, int width,
 	return pixmap_buffer;
 }
 
+Bool amdgpu_bo_get_handle(struct amdgpu_buffer *bo, uint32_t *handle)
+{
+	if (bo->flags & AMDGPU_BO_FLAGS_GBM) {
+		*handle = gbm_bo_get_handle(bo->bo.gbm).u32;
+		return TRUE;
+	}
+
+	return amdgpu_bo_export(bo->bo.amdgpu, amdgpu_bo_handle_type_kms,
+				handle) == 0;
+}
+
 int amdgpu_bo_map(ScrnInfoPtr pScrn, struct amdgpu_buffer *bo)
 {
 	AMDGPUInfoPtr info = AMDGPUPTR(pScrn);

@@ -420,18 +420,12 @@ drmmode_set_mode_major(xf86CrtcPtr crtc, DisplayModePtr mode,
 	int i;
 	int fb_id;
 	drmModeModeInfo kmode;
-	union gbm_bo_handle bo_handle;
+	uint32_t bo_handle;
 
 	if (drmmode->fb_id == 0) {
-		if (info->gbm) {
-			bo_handle = gbm_bo_get_handle(info->front_buffer->bo.gbm);
-		} else {
-			if (amdgpu_bo_export(info->front_buffer->bo.amdgpu,
-					     amdgpu_bo_handle_type_kms,
-					     &bo_handle.u32)) {
-				ErrorF("failed to get BO handle for FB\n");
-				return FALSE;
-			}
+		if (!amdgpu_bo_get_handle(info->front_buffer, &bo_handle)) {
+			ErrorF("failed to get BO handle for FB\n");
+			return FALSE;
 		}
 
 		ret = drmModeAddFB(drmmode->fd,
@@ -439,7 +433,7 @@ drmmode_set_mode_major(xf86CrtcPtr crtc, DisplayModePtr mode,
 				   pScrn->virtualY,
 				   pScrn->depth, pScrn->bitsPerPixel,
 				   pScrn->displayWidth * info->pixel_bytes,
-				   bo_handle.u32, &drmmode->fb_id);
+				   bo_handle, &drmmode->fb_id);
 		if (ret < 0) {
 			ErrorF("failed to add fb\n");
 			return FALSE;
@@ -595,20 +589,14 @@ static void drmmode_show_cursor(xf86CrtcPtr crtc)
 	AMDGPUInfoPtr info = AMDGPUPTR(pScrn);
 	drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
 	drmmode_ptr drmmode = drmmode_crtc->drmmode;
-	union gbm_bo_handle bo_handle;
+	uint32_t bo_handle;
 
-	if (info->gbm) {
-		bo_handle = gbm_bo_get_handle(drmmode_crtc->cursor_buffer->bo.gbm);
-	} else {
-		if (amdgpu_bo_export(drmmode_crtc->cursor_buffer->bo.amdgpu,
-				     amdgpu_bo_handle_type_kms,
-				     &bo_handle.u32)) {
-			ErrorF("failed to get BO handle for cursor\n");
-			return;
-		}
+	if (!amdgpu_bo_get_handle(drmmode_crtc->cursor_buffer, &bo_handle)) {
+		ErrorF("failed to get BO handle for cursor\n");
+		return;
 	}
 
-	drmModeSetCursor(drmmode->fd, drmmode_crtc->mode_crtc->crtc_id, bo_handle.u32,
+	drmModeSetCursor(drmmode->fd, drmmode_crtc->mode_crtc->crtc_id, bo_handle,
 			 info->cursor_w, info->cursor_h);
 }
 
