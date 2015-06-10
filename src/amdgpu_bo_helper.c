@@ -62,7 +62,7 @@ struct amdgpu_buffer *amdgpu_alloc_pixmap_bo(ScrnInfoPtr pScrn, int width,
 	AMDGPUInfoPtr info = AMDGPUPTR(pScrn);
 	struct amdgpu_buffer *pixmap_buffer;
 
-	if (info->gbm) {
+	if (!(usage_hint & AMDGPU_CREATE_PIXMAP_GTT) && info->gbm) {
 		uint32_t bo_use = GBM_BO_USE_RENDERING;
 		uint32_t gbm_format = amdgpu_get_gbm_format(depth, bitsPerPixel);
 
@@ -107,9 +107,11 @@ struct amdgpu_buffer *amdgpu_alloc_pixmap_bo(ScrnInfoPtr pScrn, int width,
 		unsigned cpp = (bitsPerPixel + 7) / 8;
 		unsigned pitch = cpp *
 			AMDGPU_ALIGN(width, drmmode_get_pitch_align(pScrn, cpp));
+		uint32_t domain = (usage_hint & AMDGPU_CREATE_PIXMAP_GTT) ?
+			AMDGPU_GEM_DOMAIN_GTT : AMDGPU_GEM_DOMAIN_VRAM;
 
 		pixmap_buffer = amdgpu_bo_open(pAMDGPUEnt->pDev, pitch * height,
-					       4096, AMDGPU_GEM_DOMAIN_VRAM);
+					       4096, domain);
 
 		if (new_pitch)
 			*new_pitch = pitch;
