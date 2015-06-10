@@ -1037,6 +1037,7 @@ static Bool amdgpu_setup_kernel_mem(ScreenPtr pScreen)
 					return FALSE;
 				}
 				info->cursor_buffer[c]->ref_count = 1;
+				info->cursor_buffer[c]->flags = AMDGPU_BO_FLAGS_GBM;
 
 				info->cursor_buffer[c]->bo.gbm = gbm_bo_create(info->gbm,
 									       info->cursor_w,
