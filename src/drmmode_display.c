@@ -235,7 +235,8 @@ int drmmode_crtc_get_ust_msc(xf86CrtcPtr crtc, CARD64 *ust, CARD64 *msc)
 	return Success;
 }
 
-static void drmmode_crtc_dpms(xf86CrtcPtr crtc, int mode)
+static void
+drmmode_do_crtc_dpms(xf86CrtcPtr crtc, int mode)
 {
 	drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
 	ScrnInfoPtr scrn = crtc->scrn;
@@ -294,6 +295,12 @@ static void drmmode_crtc_dpms(xf86CrtcPtr crtc, int mode)
 		}
 	}
 	drmmode_crtc->dpms_mode = mode;
+}
+
+static void
+drmmode_crtc_dpms(xf86CrtcPtr crtc, int mode)
+{
+	/* Nothing to do. drmmode_do_crtc_dpms() is called as appropriate */
 }
 
 /* TODO: currently this function only clear the front buffer to zero */
@@ -959,9 +966,14 @@ static void drmmode_output_dpms(xf86OutputPtr output, int mode)
 	drmModeConnectorPtr koutput = drmmode_output->mode_output;
 	drmmode_ptr drmmode = drmmode_output->drmmode;
 
+	if (mode != DPMSModeOn && output->crtc)
+		drmmode_do_crtc_dpms(output->crtc, mode);
+
 	drmModeConnectorSetProperty(drmmode->fd, koutput->connector_id,
 				    drmmode_output->dpms_enum_id, mode);
-	return;
+
+	if (mode == DPMSModeOn && output->crtc)
+		drmmode_do_crtc_dpms(output->crtc, mode);
 }
 
 static Bool drmmode_property_ignore(drmModePropertyPtr prop)
@@ -1681,6 +1693,7 @@ Bool drmmode_set_desired_modes(ScrnInfoPtr pScrn, drmmode_ptr drmmode)
 
 		/* Skip disabled CRTCs */
 		if (!crtc->enabled) {
+			drmmode_do_crtc_dpms(crtc, DPMSModeOff);
 			drmModeSetCrtc(drmmode->fd,
 				       drmmode_crtc->mode_crtc->crtc_id, 0, 0,
 				       0, NULL, 0, NULL);
