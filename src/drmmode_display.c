@@ -300,7 +300,16 @@ drmmode_do_crtc_dpms(xf86CrtcPtr crtc, int mode)
 static void
 drmmode_crtc_dpms(xf86CrtcPtr crtc, int mode)
 {
-	/* Nothing to do. drmmode_do_crtc_dpms() is called as appropriate */
+	drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
+	drmmode_ptr drmmode = drmmode_crtc->drmmode;
+
+	/* Disable unused CRTCs and enable/disable active CRTCs */
+	if (!crtc->enabled || mode != DPMSModeOn)
+		drmModeSetCrtc(drmmode->fd, drmmode_crtc->mode_crtc->crtc_id,
+			       0, 0, 0, NULL, 0, NULL);
+	else
+		crtc->funcs->set_mode_major(crtc, &crtc->mode, crtc->rotation,
+					    crtc->x, crtc->y);
 }
 
 /* TODO: currently this function only clear the front buffer to zero */
