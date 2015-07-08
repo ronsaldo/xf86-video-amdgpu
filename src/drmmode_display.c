@@ -307,7 +307,7 @@ drmmode_crtc_dpms(xf86CrtcPtr crtc, int mode)
 	if (!crtc->enabled || mode != DPMSModeOn)
 		drmModeSetCrtc(drmmode->fd, drmmode_crtc->mode_crtc->crtc_id,
 			       0, 0, 0, NULL, 0, NULL);
-	else
+	else if (drmmode_crtc->dpms_mode != DPMSModeOn)
 		crtc->funcs->set_mode_major(crtc, &crtc->mode, crtc->rotation,
 					    crtc->x, crtc->y);
 }
