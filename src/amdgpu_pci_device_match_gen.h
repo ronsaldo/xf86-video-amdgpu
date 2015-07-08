@@ -77,5 +77,6 @@ static const struct pci_id_match amdgpu_device_match[] = {
  ATI_DEVICE_MATCH( PCI_CHIP_CARRIZO_9875, 0 ),
  ATI_DEVICE_MATCH( PCI_CHIP_CARRIZO_9876, 0 ),
  ATI_DEVICE_MATCH( PCI_CHIP_CARRIZO_9877, 0 ),
+ ATI_DEVICE_MATCH( PCI_CHIP_FIJI_7300, 0 ),
  { 0, 0, 0 }
 };

@@ -77,5 +77,6 @@ SymTabRec AMDGPUChipsets[] = {
   { PCI_CHIP_CARRIZO_9875, "CARRIZO" },
   { PCI_CHIP_CARRIZO_9876, "CARRIZO" },
   { PCI_CHIP_CARRIZO_9877, "CARRIZO" },
+  { PCI_CHIP_FIJI_7300, "FIJI" },
   { -1,                 NULL }
 };
