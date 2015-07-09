@@ -425,18 +425,11 @@ xf86CrtcPtr amdgpu_dri2_drawable_crtc(DrawablePtr pDraw, Bool consider_disabled)
 {
 	ScreenPtr pScreen = pDraw->pScreen;
 	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
-	xf86CrtcPtr crtc;
 
-	crtc = amdgpu_pick_best_crtc(pScrn, consider_disabled,
+	return amdgpu_pick_best_crtc(pScrn, consider_disabled,
 				     pDraw->x,
 				     pDraw->x + pDraw->width,
 				     pDraw->y, pDraw->y + pDraw->height);
-
-	/* Make sure the CRTC is valid and this is the real front buffer */
-	if (crtc != NULL && !crtc->rotatedData)
-		return crtc;
-	else
-		return NULL;
 }
 
 static void
