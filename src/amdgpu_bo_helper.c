@@ -193,11 +193,9 @@ struct amdgpu_buffer *amdgpu_bo_open(amdgpu_device_handle pDev,
 				       uint32_t domains)
 {
 	struct amdgpu_bo_alloc_request alloc_request;
-	struct amdgpu_bo_alloc_result buffer;
 	struct amdgpu_buffer *bo = NULL;
 
 	memset(&alloc_request, 0, sizeof(struct amdgpu_bo_alloc_request));
-	memset(&buffer, 0, sizeof(struct amdgpu_bo_alloc_result));
 
 	bo = (struct amdgpu_buffer *)calloc(1, sizeof(struct amdgpu_buffer));
 	if (bo == NULL) {
@@ -208,12 +206,11 @@ struct amdgpu_buffer *amdgpu_bo_open(amdgpu_device_handle pDev,
 	alloc_request.phys_alignment = phys_alignment;
 	alloc_request.preferred_heap = domains;
 
-	if (amdgpu_bo_alloc(pDev, &alloc_request, &buffer)) {
+	if (amdgpu_bo_alloc(pDev, &alloc_request, &bo->bo.amdgpu)) {
 		free(bo);
 		return NULL;
 	}
 
-	bo->bo.amdgpu = buffer.buf_handle;
 	bo->ref_count = 1;
 
 	return bo;
