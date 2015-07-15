@@ -846,14 +846,15 @@ void drmmode_crtc_hw_id(xf86CrtcPtr crtc)
 		drmmode_crtc->hw_id = -1;
 }
 
-static void drmmode_crtc_init(ScrnInfoPtr pScrn, drmmode_ptr drmmode, int num)
+static unsigned int drmmode_crtc_init(ScrnInfoPtr pScrn, drmmode_ptr drmmode, int num)
 {
 	xf86CrtcPtr crtc;
 	drmmode_crtc_private_ptr drmmode_crtc;
+	AMDGPUEntPtr pAMDGPUEnt = AMDGPUEntPriv(pScrn);
 
 	crtc = xf86CrtcCreate(pScrn, &drmmode_crtc_funcs);
 	if (crtc == NULL)
-		return;
+		return 0;
 
 	drmmode_crtc = xnfcalloc(sizeof(drmmode_crtc_private_rec), 1);
 	drmmode_crtc->mode_crtc =
@@ -862,7 +863,12 @@ static void drmmode_crtc_init(ScrnInfoPtr pScrn, drmmode_ptr drmmode, int num)
 	crtc->driver_private = drmmode_crtc;
 	drmmode_crtc_hw_id(crtc);
 
-	return;
+	/* Mark num'th crtc as in use on this device. */
+	pAMDGPUEnt->assigned_crtcs |= (1 << num);
+	xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, AMDGPU_LOGLEVEL_DEBUG,
+		       "Allocated crtc nr. %d to this screen.\n", num);
+
+	return 1;
 }
 
 static xf86OutputStatus drmmode_output_detect(xf86OutputPtr output)
@@ -1222,7 +1228,7 @@ const char *output_names[] = { "None",
 
 #define NUM_OUTPUT_NAMES (sizeof(output_names) / sizeof(output_names[0]))
 
-static void
+static unsigned int
 drmmode_output_init(ScrnInfoPtr pScrn, drmmode_ptr drmmode, int num)
 {
 	AMDGPUInfoPtr info = AMDGPUPTR(pScrn);
@@ -1239,7 +1245,7 @@ drmmode_output_init(ScrnInfoPtr pScrn, drmmode_ptr drmmode, int num)
 	    drmModeGetConnector(drmmode->fd,
 				drmmode->mode_res->connectors[num]);
 	if (!koutput)
-		return;
+		return 0;
 
 	kencoders = calloc(sizeof(drmModeEncoderPtr), koutput->count_encoders);
 	if (!kencoders) {
@@ -1325,7 +1331,7 @@ drmmode_output_init(ScrnInfoPtr pScrn, drmmode_ptr drmmode, int num)
 		}
 	}
 
-	return;
+	return 1;
 out_free_encoders:
 	if (kencoders) {
 		for (i = 0; i < koutput->count_encoders; i++)
@@ -1333,7 +1339,7 @@ out_free_encoders:
 		free(kencoders);
 	}
 	drmModeFreeConnector(koutput);
-
+	return 0;
 }
 
 uint32_t find_clones(ScrnInfoPtr scrn, xf86OutputPtr output)
@@ -1600,7 +1606,9 @@ static void drm_wakeup_handler(pointer data, int err, pointer p)
 
 Bool drmmode_pre_init(ScrnInfoPtr pScrn, drmmode_ptr drmmode, int cpp)
 {
+	AMDGPUEntPtr pAMDGPUEnt = AMDGPUEntPriv(pScrn);
 	int i;
+	unsigned int crtcs_needed = 0;
 
 	xf86CrtcConfigInit(pScrn, &drmmode_xf86crtc_config_funcs);
 
@@ -1612,13 +1620,25 @@ Bool drmmode_pre_init(ScrnInfoPtr pScrn, drmmode_ptr drmmode, int cpp)
 
 	xf86CrtcSetSizeRange(pScrn, 320, 200, drmmode->mode_res->max_width,
 			     drmmode->mode_res->max_height);
-	for (i = 0; i < drmmode->mode_res->count_crtcs; i++)
-		if (!xf86IsEntityShared(pScrn->entityList[0])
-		    || pScrn->confScreen->device->screen == i)
-			drmmode_crtc_init(pScrn, drmmode, i);
 
+	xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, AMDGPU_LOGLEVEL_DEBUG,
+		       "Initializing outputs ...\n");
 	for (i = 0; i < drmmode->mode_res->count_connectors; i++)
-		drmmode_output_init(pScrn, drmmode, i);
+		crtcs_needed += drmmode_output_init(pScrn, drmmode, i);
+
+	xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, AMDGPU_LOGLEVEL_DEBUG,
+		       "%d crtcs needed for screen.\n", crtcs_needed);
+
+	for (i = 0; i < drmmode->mode_res->count_crtcs; i++)
+		if (!xf86IsEntityShared(pScrn->entityList[0]) ||
+		    (crtcs_needed && !(pAMDGPUEnt->assigned_crtcs & (1 << i))))
+			crtcs_needed -= drmmode_crtc_init(pScrn, drmmode, i);
+
+	/* All ZaphodHeads outputs provided with matching crtcs? */
+	if (xf86IsEntityShared(pScrn->entityList[0]) && (crtcs_needed > 0))
+		xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
+			   "%d ZaphodHeads crtcs unavailable. Some outputs will stay off.\n",
+			   crtcs_needed);
 
 	/* workout clones */
 	drmmode_clones_init(pScrn, drmmode);

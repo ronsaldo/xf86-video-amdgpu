@@ -924,9 +924,13 @@ static Bool AMDGPUCloseScreen_KMS(CLOSE_SCREEN_ARGS_DECL)
 {
 	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
 	AMDGPUInfoPtr info = AMDGPUPTR(pScrn);
+	AMDGPUEntPtr pAMDGPUEnt = AMDGPUEntPriv(pScrn);
 
 	xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, AMDGPU_LOGLEVEL_DEBUG,
 		       "AMDGPUCloseScreen\n");
+
+	/* Clear mask of assigned crtc's in this generation */
+	pAMDGPUEnt->assigned_crtcs = 0;
 
 	drmmode_uevent_fini(pScrn, &info->drmmode);
 	amdgpu_drm_queue_close(pScrn);

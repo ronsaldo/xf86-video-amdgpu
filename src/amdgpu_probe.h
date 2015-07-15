@@ -80,6 +80,7 @@ typedef struct {
 	int fd_ref;
 	unsigned long fd_wakeup_registered;	/* server generation for which fd has been registered for wakeup handling */
 	int fd_wakeup_ref;
+	unsigned int assigned_crtcs;
 } AMDGPUEntRec, *AMDGPUEntPtr;
 
 extern const OptionInfoRec *AMDGPUOptionsWeak(void);
