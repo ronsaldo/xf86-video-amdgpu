@@ -155,7 +155,7 @@ static Bool AMDGPUCreateScreenResources_KMS(ScreenPtr pScreen)
 		return FALSE;
 	pScreen->CreateScreenResources = AMDGPUCreateScreenResources_KMS;
 
-	if (!drmmode_set_desired_modes(pScrn, &info->drmmode))
+	if (!drmmode_set_desired_modes(pScrn, &info->drmmode, FALSE))
 		return FALSE;
 
 	drmmode_uevent_init(pScrn, &info->drmmode);
@@ -431,6 +431,17 @@ static void AMDGPUBlockHandler_KMS(BLOCKHANDLER_ARGS_DECL)
 #ifdef AMDGPU_PIXMAP_SHARING
 	amdgpu_dirty_update(pScreen);
 #endif
+}
+
+static void AMDGPUBlockHandler_oneshot(BLOCKHANDLER_ARGS_DECL)
+{
+	SCREEN_PTR(arg);
+	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
+	AMDGPUInfoPtr info = AMDGPUPTR(pScrn);
+
+	drmmode_set_desired_modes(pScrn, &info->drmmode, TRUE);
+
+	AMDGPUBlockHandler_KMS(BLOCKHANDLER_ARGS);
 }
 
 static void
@@ -1194,7 +1205,7 @@ Bool AMDGPUScreenInit_KMS(SCREEN_INIT_ARGS_DECL)
 	pScreen->CloseScreen = AMDGPUCloseScreen_KMS;
 	pScreen->SaveScreen = AMDGPUSaveScreen_KMS;
 	info->BlockHandler = pScreen->BlockHandler;
-	pScreen->BlockHandler = AMDGPUBlockHandler_KMS;
+	pScreen->BlockHandler = AMDGPUBlockHandler_oneshot;
 
 	if (!AddCallback(&FlushCallback, amdgpu_flush_callback, pScrn))
 		return FALSE;
@@ -1249,7 +1260,7 @@ Bool AMDGPUEnterVT_KMS(VT_FUNC_ARGS_DECL)
 		drmmode_copy_fb(pScrn, &info->drmmode);
 #endif
 
-	if (!drmmode_set_desired_modes(pScrn, &info->drmmode))
+	if (!drmmode_set_desired_modes(pScrn, &info->drmmode, TRUE))
 		return FALSE;
 
 	return TRUE;
