@@ -655,6 +655,34 @@ static void AMDGPUSetupCapabilities(ScrnInfoPtr pScrn)
 #endif
 }
 
+#if GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) >= 10
+
+/* When the root window is created, initialize the screen contents from
+ * console if -background none was specified on the command line
+ */
+static Bool AMDGPUCreateWindow(WindowPtr pWin)
+{
+	ScreenPtr pScreen = pWin->drawable.pScreen;
+	ScrnInfoPtr pScrn;
+	AMDGPUInfoPtr info;
+	Bool ret;
+
+	if (pWin != pScreen->root)
+		ErrorF("%s called for non-root window %p\n", __func__, pWin);
+
+	pScrn = xf86ScreenToScrn(pScreen);
+	info = AMDGPUPTR(pScrn);
+	pScreen->CreateWindow = info->CreateWindow;
+	ret = pScreen->CreateWindow(pWin);
+
+	if (ret)
+		drmmode_copy_fb(pScrn, &info->drmmode);
+
+	return ret;
+}
+
+#endif
+
 Bool AMDGPUPreInit_KMS(ScrnInfoPtr pScrn, int flags)
 {
 	AMDGPUInfoPtr info;
@@ -1153,6 +1181,13 @@ Bool AMDGPUScreenInit_KMS(SCREEN_INIT_ARGS_DECL)
 	}
 	pScrn->pScreen = pScreen;
 
+#if GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) >= 10
+	if (bgNoneRoot) {
+		info->CreateWindow = pScreen->CreateWindow;
+		pScreen->CreateWindow = AMDGPUCreateWindow;
+	}
+#endif
+
 	/* Provide SaveScreen & wrap BlockHandler and CloseScreen */
 	/* Wrap CloseScreen */
 	info->CloseScreen = pScreen->CloseScreen;
@@ -1208,6 +1243,11 @@ Bool AMDGPUEnterVT_KMS(VT_FUNC_ARGS_DECL)
 		ErrorF("Unable to retrieve master\n");
 
 	pScrn->vtSema = TRUE;
+
+#if GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) >= 10
+	if (bgNoneRoot)
+		drmmode_copy_fb(pScrn, &info->drmmode);
+#endif
 
 	if (!drmmode_set_desired_modes(pScrn, &info->drmmode))
 		return FALSE;

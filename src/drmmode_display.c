@@ -1718,11 +1718,6 @@ Bool drmmode_set_desired_modes(ScrnInfoPtr pScrn, drmmode_ptr drmmode)
 	xf86CrtcConfigPtr config = XF86_CRTC_CONFIG_PTR(pScrn);
 	int c;
 
-#if GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) >= 10
-	if (bgNoneRoot)
-		drmmode_copy_fb(pScrn, drmmode);
-#endif
-
 	for (c = 0; c < config->num_crtc; c++) {
 		xf86CrtcPtr crtc = config->crtc[c];
 		drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
