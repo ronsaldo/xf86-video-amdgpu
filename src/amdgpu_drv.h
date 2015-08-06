@@ -202,6 +202,7 @@ typedef struct {
 	struct amdgpu_dri2 dri2;
 
 	/* accel */
+	PixmapPtr fbcon_pixmap;
 	uint_fast32_t gpu_flushed;
 	uint_fast32_t gpu_synced;
 	Bool use_glamor;

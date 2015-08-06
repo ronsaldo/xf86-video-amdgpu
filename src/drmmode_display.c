@@ -314,16 +314,117 @@ drmmode_crtc_dpms(xf86CrtcPtr crtc, int mode)
 
 #if GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) >= 10
 
-/* TODO: currently this function only clear the front buffer to zero */
-/* Moving forward, we might to look into making the copy with glamor instead */
+static PixmapPtr
+create_pixmap_for_fbcon(drmmode_ptr drmmode,
+			ScrnInfoPtr pScrn, int fbcon_id)
+{
+	AMDGPUEntPtr pAMDGPUEnt = AMDGPUEntPriv(pScrn);
+	AMDGPUInfoPtr info = AMDGPUPTR(pScrn);
+	PixmapPtr pixmap = info->fbcon_pixmap;
+	struct amdgpu_buffer *bo;
+	drmModeFBPtr fbcon;
+	struct drm_gem_flink flink;
+	struct amdgpu_bo_import_result import = {0};
+
+	if (pixmap)
+		return pixmap;
+
+	fbcon = drmModeGetFB(drmmode->fd, fbcon_id);
+	if (fbcon == NULL)
+		return NULL;
+
+	if (fbcon->depth != pScrn->depth ||
+	    fbcon->width != pScrn->virtualX ||
+	    fbcon->height != pScrn->virtualY)
+		goto out_free_fb;
+
+	flink.handle = fbcon->handle;
+	if (ioctl(drmmode->fd, DRM_IOCTL_GEM_FLINK, &flink) < 0) {
+		xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+			   "Couldn't flink fbcon handle\n");
+		goto out_free_fb;
+	}
+
+	bo = calloc(1, sizeof(struct amdgpu_buffer));
+	if (bo == NULL) {
+		xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+			   "Couldn't allocate bo for fbcon handle\n");
+		goto out_free_fb;
+	}
+	bo->ref_count = 1;
+
+	if (amdgpu_bo_import(pAMDGPUEnt->pDev,
+			     amdgpu_bo_handle_type_gem_flink_name, flink.name,
+			     &import) != 0) {
+		xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+			   "Couldn't import BO for fbcon handle\n");
+		goto out_free_bo;
+	}
+	bo->bo.amdgpu = import.buf_handle;
+
+	pixmap = drmmode_create_bo_pixmap(pScrn, fbcon->width, fbcon->height,
+					  fbcon->depth, fbcon->bpp,
+					  fbcon->pitch, bo);
+	info->fbcon_pixmap = pixmap;
+out_free_bo:
+	amdgpu_bo_unref(&bo);
+out_free_fb:
+	drmModeFreeFB(fbcon);
+	return pixmap;
+}
+
 void drmmode_copy_fb(ScrnInfoPtr pScrn, drmmode_ptr drmmode)
 {
+	xf86CrtcConfigPtr   xf86_config = XF86_CRTC_CONFIG_PTR(pScrn);
 	AMDGPUInfoPtr info = AMDGPUPTR(pScrn);
-	uint32_t size = pScrn->displayWidth * info->pixel_bytes * pScrn->virtualY;
+	PixmapPtr src, dst;
+	ScreenPtr pScreen = pScrn->pScreen;
+	int fbcon_id = 0;
+	GCPtr gc;
+	int i;
 
-	/* memset the bo */
-	amdgpu_bo_map(pScrn, info->front_buffer);
-	memset(info->front_buffer->cpu_ptr, 0x00, size);
+	for (i = 0; i < xf86_config->num_crtc; i++) {
+		drmmode_crtc_private_ptr drmmode_crtc = xf86_config->crtc[i]->driver_private;
+
+		if (drmmode_crtc->mode_crtc->buffer_id)
+			fbcon_id = drmmode_crtc->mode_crtc->buffer_id;
+	}
+
+	if (!fbcon_id)
+		return;
+
+	if (fbcon_id == drmmode->fb_id) {
+		/* in some rare case there might be no fbcon and we might already
+		 * be the one with the current fb to avoid a false deadlck in
+		 * kernel ttm code just do nothing as anyway there is nothing
+		 * to do
+		 */
+		return;
+	}
+
+	src = create_pixmap_for_fbcon(drmmode, pScrn, fbcon_id);
+	if (!src)
+		return;
+
+	dst = pScreen->GetScreenPixmap(pScreen);
+
+	gc = GetScratchGC(pScrn->depth, pScreen);
+	ValidateGC(&dst->drawable, gc);
+
+	(*gc->ops->CopyArea)(&src->drawable, &dst->drawable, gc, 0, 0,
+			     pScrn->virtualX, pScrn->virtualY, 0, 0);
+
+	FreeScratchGC(gc);
+
+	amdgpu_glamor_flush(pScrn);
+
+	pScreen->canDoBGNoneRoot = TRUE;
+
+	if (info->fbcon_pixmap)
+		pScrn->pScreen->DestroyPixmap(info->fbcon_pixmap);
+	info->fbcon_pixmap = NULL;
+
+	return;
 }
 
 #endif /* GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) >= 10 */

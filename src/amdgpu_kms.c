@@ -112,6 +112,9 @@ static void AMDGPUFreeRec(ScrnInfoPtr pScrn)
 
 	info = AMDGPUPTR(pScrn);
 
+	if (info->fbcon_pixmap)
+		pScrn->pScreen->DestroyPixmap(info->fbcon_pixmap);
+
 	if (info->dri2.drm_fd > 0) {
 		DevUnion *pPriv;
 		AMDGPUEntPtr pAMDGPUEnt;
@@ -1193,7 +1196,7 @@ Bool AMDGPUScreenInit_KMS(SCREEN_INIT_ARGS_DECL)
 	pScrn->pScreen = pScreen;
 
 #if GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) >= 10
-	if (bgNoneRoot) {
+	if (bgNoneRoot && info->use_glamor) {
 		info->CreateWindow = pScreen->CreateWindow;
 		pScreen->CreateWindow = AMDGPUCreateWindow;
 	}
@@ -1256,7 +1259,7 @@ Bool AMDGPUEnterVT_KMS(VT_FUNC_ARGS_DECL)
 	pScrn->vtSema = TRUE;
 
 #if GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) >= 10
-	if (bgNoneRoot)
+	if (bgNoneRoot && info->use_glamor)
 		drmmode_copy_fb(pScrn, &info->drmmode);
 #endif
 
