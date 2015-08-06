@@ -1541,6 +1541,8 @@ static Bool drmmode_xf86crtc_resize(ScrnInfoPtr scrn, int width, int height)
 	uint32_t bo_handle;
 	void *fb_shadow;
 	int hint = 0;
+	xRectangle rect;
+	GCPtr gc;
 
 	if (scrn->virtualX == width && scrn->virtualY == height)
 		return TRUE;
@@ -1614,6 +1616,22 @@ static Bool drmmode_xf86crtc_resize(ScrnInfoPtr scrn, int width, int height)
 	scrn->pixmapPrivate.ptr = ppix->devPrivate.ptr;
 #endif
 
+	if (info->use_glamor)
+		amdgpu_glamor_create_screen_resources(scrn->pScreen);
+
+	/* Clear new buffer */
+	gc = GetScratchGC(ppix->drawable.depth, scrn->pScreen);
+	ValidateGC(&ppix->drawable, gc);
+	rect.x = 0;
+	rect.y = 0;
+	rect.width = width;
+	rect.height = height;
+	info->force_accel = TRUE;
+	(*gc->ops->PolyFillRect)(&ppix->drawable, gc, 1, &rect);
+	info->force_accel = FALSE;
+	FreeScratchGC(gc);
+	amdgpu_glamor_flush(scrn);
+
 	for (i = 0; i < xf86_config->num_crtc; i++) {
 		xf86CrtcPtr crtc = xf86_config->crtc[i];
 
@@ -1623,9 +1641,6 @@ static Bool drmmode_xf86crtc_resize(ScrnInfoPtr scrn, int width, int height)
 		drmmode_set_mode_major(crtc, &crtc->mode,
 				       crtc->rotation, crtc->x, crtc->y);
 	}
-
-	if (info->use_glamor)
-		amdgpu_glamor_create_screen_resources(scrn->pScreen);
 
 	if (old_fb_id)
 		drmModeRmFB(drmmode->fd, old_fb_id);

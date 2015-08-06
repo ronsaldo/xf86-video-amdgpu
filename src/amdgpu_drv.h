@@ -206,6 +206,7 @@ typedef struct {
 	uint_fast32_t gpu_flushed;
 	uint_fast32_t gpu_synced;
 	Bool use_glamor;
+	Bool force_accel;
 	Bool shadow_primary;
 	Bool tear_free;
 

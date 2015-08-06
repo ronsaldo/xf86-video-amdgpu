@@ -428,8 +428,16 @@ amdgpu_glamor_poly_fill_rect(DrawablePtr pDrawable, GCPtr pGC,
 			     int nrect, xRectangle *prect)
 {
 	ScrnInfoPtr scrn = xf86ScreenToScrn(pDrawable->pScreen);
+	AMDGPUInfoPtr info = AMDGPUPTR(scrn);
 	PixmapPtr pixmap = get_drawable_pixmap(pDrawable);
 	struct amdgpu_pixmap *priv = amdgpu_get_pixmap_private(pixmap);
+
+	if ((info->force_accel || amdgpu_glamor_use_gpu(pixmap)) &&
+	    amdgpu_glamor_prepare_access_gpu(priv)) {
+		info->glamor.SavedPolyFillRect(pDrawable, pGC, nrect, prect);
+		amdgpu_glamor_finish_access_gpu_rw(info, priv);
+		return;
+	}
 
 	if (amdgpu_glamor_prepare_access_cpu_rw(scrn, pixmap, priv)) {
 		if (amdgpu_glamor_prepare_access_gc(scrn, pGC)) {
@@ -629,6 +637,7 @@ amdgpu_glamor_validate_gc(GCPtr pGC, unsigned long changes, DrawablePtr pDrawabl
 
 	glamor_validate_gc(pGC, changes, pDrawable);
 	info->glamor.SavedCopyArea = pGC->ops->CopyArea;
+	info->glamor.SavedPolyFillRect = pGC->ops->PolyFillRect;
 
 	if (amdgpu_get_pixmap_private(get_drawable_pixmap(pDrawable)) ||
 	    (pGC->stipple && amdgpu_get_pixmap_private(pGC->stipple)) ||
