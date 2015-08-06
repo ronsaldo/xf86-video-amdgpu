@@ -312,6 +312,8 @@ drmmode_crtc_dpms(xf86CrtcPtr crtc, int mode)
 					    crtc->x, crtc->y);
 }
 
+#if GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) >= 10
+
 /* TODO: currently this function only clear the front buffer to zero */
 /* Moving forward, we might to look into making the copy with glamor instead */
 void drmmode_copy_fb(ScrnInfoPtr pScrn, drmmode_ptr drmmode)
@@ -323,6 +325,8 @@ void drmmode_copy_fb(ScrnInfoPtr pScrn, drmmode_ptr drmmode)
 	amdgpu_bo_map(pScrn, info->front_buffer);
 	memset(info->front_buffer->cpu_ptr, 0x00, size);
 }
+
+#endif /* GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) >= 10 */
 
 static void
 drmmode_crtc_scanout_destroy(drmmode_ptr drmmode,
@@ -1714,7 +1718,10 @@ Bool drmmode_set_desired_modes(ScrnInfoPtr pScrn, drmmode_ptr drmmode)
 	xf86CrtcConfigPtr config = XF86_CRTC_CONFIG_PTR(pScrn);
 	int c;
 
-	drmmode_copy_fb(pScrn, drmmode);
+#if GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) >= 10
+	if (bgNoneRoot)
+		drmmode_copy_fb(pScrn, drmmode);
+#endif
 
 	for (c = 0; c < config->num_crtc; c++) {
 		xf86CrtcPtr crtc = config->crtc[c];
