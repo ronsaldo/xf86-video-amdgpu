@@ -416,7 +416,7 @@ void drmmode_copy_fb(ScrnInfoPtr pScrn, drmmode_ptr drmmode)
 
 	FreeScratchGC(gc);
 
-	amdgpu_glamor_flush(pScrn);
+	amdgpu_glamor_finish(pScrn);
 
 	pScreen->canDoBGNoneRoot = TRUE;
 
@@ -697,6 +697,7 @@ drmmode_set_mode_major(xf86CrtcPtr crtc, DisplayModePtr mode,
 				x = y = 0;
 
 				amdgpu_scanout_update_handler(pScrn, 0, 0, crtc);
+				amdgpu_glamor_finish(pScrn);
 			}
 		}
 		ret =
@@ -1630,7 +1631,7 @@ static Bool drmmode_xf86crtc_resize(ScrnInfoPtr scrn, int width, int height)
 	(*gc->ops->PolyFillRect)(&ppix->drawable, gc, 1, &rect);
 	info->force_accel = FALSE;
 	FreeScratchGC(gc);
-	amdgpu_glamor_flush(scrn);
+	amdgpu_glamor_finish(scrn);
 
 	for (i = 0; i < xf86_config->num_crtc; i++) {
 		xf86CrtcPtr crtc = xf86_config->crtc[i];
