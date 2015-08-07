@@ -65,6 +65,7 @@ Bool amdgpu_glamor_create_screen_resources(ScreenPtr screen);
 void amdgpu_glamor_free_screen(int scrnIndex, int flags);
 
 void amdgpu_glamor_flush(ScrnInfoPtr pScrn);
+void amdgpu_glamor_finish(ScrnInfoPtr pScrn);
 
 Bool
 amdgpu_glamor_create_textured_pixmap(PixmapPtr pixmap, struct amdgpu_pixmap *priv);

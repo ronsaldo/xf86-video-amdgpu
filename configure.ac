@@ -135,6 +135,8 @@ if test "x$GLAMOR" != "xno"; then
 			       #include "glamor.h"])
 	fi
 
+	PKG_CHECK_MODULES(LIBGL, [gl])
+
 	if test "x$GLAMOR_XSERVER" != xyes; then
 		PKG_CHECK_MODULES(LIBGLAMOR, [glamor >= 0.6.0])
 		PKG_CHECK_MODULES(LIBGLAMOR_EGL, [glamor-egl])
