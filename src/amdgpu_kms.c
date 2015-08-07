@@ -675,7 +675,7 @@ static void AMDGPUSetupCapabilities(ScrnInfoPtr pScrn)
 /* When the root window is created, initialize the screen contents from
  * console if -background none was specified on the command line
  */
-static Bool AMDGPUCreateWindow(WindowPtr pWin)
+static Bool AMDGPUCreateWindow_oneshot(WindowPtr pWin)
 {
 	ScreenPtr pScreen = pWin->drawable.pScreen;
 	ScrnInfoPtr pScrn;
@@ -1204,9 +1204,9 @@ Bool AMDGPUScreenInit_KMS(SCREEN_INIT_ARGS_DECL)
 	pScrn->pScreen = pScreen;
 
 #if GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) >= 10
-	if (bgNoneRoot && info->use_glamor) {
+	if (serverGeneration == 1 && bgNoneRoot && info->use_glamor) {
 		info->CreateWindow = pScreen->CreateWindow;
-		pScreen->CreateWindow = AMDGPUCreateWindow;
+		pScreen->CreateWindow = AMDGPUCreateWindow_oneshot;
 	}
 #endif
 
@@ -1265,11 +1265,6 @@ Bool AMDGPUEnterVT_KMS(VT_FUNC_ARGS_DECL)
 		ErrorF("Unable to retrieve master\n");
 
 	pScrn->vtSema = TRUE;
-
-#if GET_ABI_MAJOR(ABI_VIDEODRV_VERSION) >= 10
-	if (bgNoneRoot && info->use_glamor)
-		drmmode_copy_fb(pScrn, &info->drmmode);
-#endif
 
 	if (!drmmode_set_desired_modes(pScrn, &info->drmmode, TRUE))
 		return FALSE;
