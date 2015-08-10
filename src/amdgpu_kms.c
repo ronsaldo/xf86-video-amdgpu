@@ -66,7 +66,8 @@ const OptionInfoRec AMDGPUOptions_KMS[] = {
 	{OPTION_SUBPIXEL_ORDER, "SubPixelOrder", OPTV_ANYSTR, {0}, FALSE},
 	{OPTION_ZAPHOD_HEADS, "ZaphodHeads", OPTV_STRING, {0}, FALSE},
 	{OPTION_ACCEL_METHOD, "AccelMethod", OPTV_STRING, {0}, FALSE},
-	{ OPTION_DRI3, "DRI3", OPTV_BOOLEAN, {0}, FALSE },
+	{OPTION_DRI3, "DRI3", OPTV_BOOLEAN, {0}, FALSE},
+	{OPTION_DRI, "DRI", OPTV_INTEGER, {0}, FALSE},
 	{OPTION_SHADOW_PRIMARY, "ShadowPrimary", OPTV_BOOLEAN, {0}, FALSE},
 	{OPTION_TEAR_FREE, "TearFree", OPTV_BOOLEAN, {0}, FALSE},
 	{-1, NULL, OPTV_NONE, {0}, FALSE}
@@ -1016,6 +1017,7 @@ Bool AMDGPUScreenInit_KMS(SCREEN_INIT_ARGS_DECL)
 	int subPixelOrder = SubPixelUnknown;
 	MessageType from;
 	Bool value;
+	int driLevel;
 	char *s;
 	void *front_ptr;
 	int ret;
@@ -1106,10 +1108,15 @@ Bool AMDGPUScreenInit_KMS(SCREEN_INIT_ARGS_DECL)
 #endif
 
 	value = FALSE;
+	from = X_DEFAULT;
 	if (xf86GetOptValBool(info->Options, OPTION_DRI3, &value))
 		from = X_CONFIG;
-	else
-		from = X_DEFAULT;
+
+	if (xf86GetOptValInteger(info->Options, OPTION_DRI, &driLevel) &&
+	    (driLevel == 2 || driLevel == 3)) {
+		from = X_CONFIG;
+		value = driLevel == 3;
+	}
 
 	if (value) {
 		value = amdgpu_sync_init(pScreen) &&
@@ -1119,6 +1126,7 @@ Bool AMDGPUScreenInit_KMS(SCREEN_INIT_ARGS_DECL)
 		if (!value)
 			from = X_WARNING;
 	}
+
 	xf86DrvMsg(pScrn->scrnIndex, from, "DRI3 %sabled\n", value ? "en" : "dis");
 
 	pScrn->vtSema = TRUE;
