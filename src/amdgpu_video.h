@@ -7,6 +7,5 @@
 #include "xf86Crtc.h"
 
 Bool amdgpu_crtc_is_enabled(xf86CrtcPtr crtc);
-uint32_t amdgpu_get_interpolated_vblanks(xf86CrtcPtr crtc);
 
 #endif /* __AMDGPU_VIDEO_H__ */
