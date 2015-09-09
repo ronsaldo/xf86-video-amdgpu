@@ -127,13 +127,14 @@ static int amdgpu_kernel_open_fd(ScrnInfoPtr pScrn, struct pci_device *dev)
 #endif
 
 	fd = drmOpen(NULL, busid);
-	free(busid);
 	if (fd == -1) {
 		xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
 			   "[drm] Failed to open DRM device for %s: %s\n",
 			   busid, strerror(errno));
+		free(busid);
 		return fd;
 	}
+	free(busid);
 
 	/* Check that what we opened was a master or a master-capable FD,
 	 * by setting the version of the interface we'll use to talk to it.
