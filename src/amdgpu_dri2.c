@@ -507,9 +507,9 @@ xf86CrtcPtr amdgpu_dri2_drawable_crtc(DrawablePtr pDraw, Bool consider_disabled)
 		if (priv->crtc && priv->crtc != crtc) {
 			CARD64 ust, mscold, mscnew;
 
-			amdgpu_dri2_get_crtc_msc(priv->crtc, &ust, &mscold);
-			amdgpu_dri2_get_crtc_msc(crtc, &ust, &mscnew);
-			priv->vblank_delta += mscold - mscnew;
+			if (amdgpu_dri2_get_crtc_msc(priv->crtc, &ust, &mscold) &&
+			    amdgpu_dri2_get_crtc_msc(crtc, &ust, &mscnew))
+				priv->vblank_delta += mscold - mscnew;
 		}
 
 		priv->crtc = crtc;
