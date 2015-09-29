@@ -136,7 +136,7 @@ void AMDGPUInitVideo(ScreenPtr pScreen)
 
 	num_adaptors = xf86XVListGenericAdaptors(pScrn, &adaptors);
 	newAdaptors =
-	    malloc((num_adaptors + 2) * sizeof(XF86VideoAdaptorPtr *));
+	    malloc((num_adaptors + 2) * sizeof(*newAdaptors));
 	if (newAdaptors == NULL)
 		return;
 
