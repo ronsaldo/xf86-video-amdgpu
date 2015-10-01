@@ -619,9 +619,8 @@ static void amdgpu_reference_drm_fd(ScrnInfoPtr pScrn)
 	AMDGPUInfoPtr info = AMDGPUPTR(pScrn);
 	AMDGPUEntPtr pAMDGPUEnt = AMDGPUEntPriv(pScrn);
 
-	info->dri2.drm_fd = pAMDGPUEnt->fd;
+	info->drmmode.fd = info->dri2.drm_fd = pAMDGPUEnt->fd;
 	pAMDGPUEnt->fd_ref++;
-	info->drmmode.fd = info->dri2.drm_fd;
 }
 
 static Bool amdgpu_get_tile_config(ScrnInfoPtr pScrn)
