@@ -145,6 +145,7 @@ typedef enum {
 	OPTION_DRI,
 	OPTION_SHADOW_PRIMARY,
 	OPTION_TEAR_FREE,
+	OPTION_DELETE_DP12,
 } AMDGPUOpts;
 
 #define AMDGPU_VSYNC_TIMEOUT	20000	/* Maximum wait for VSYNC (in usecs) */

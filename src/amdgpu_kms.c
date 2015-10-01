@@ -70,6 +70,7 @@ const OptionInfoRec AMDGPUOptions_KMS[] = {
 	{OPTION_DRI, "DRI", OPTV_INTEGER, {0}, FALSE},
 	{OPTION_SHADOW_PRIMARY, "ShadowPrimary", OPTV_BOOLEAN, {0}, FALSE},
 	{OPTION_TEAR_FREE, "TearFree", OPTV_BOOLEAN, {0}, FALSE},
+	{OPTION_DELETE_DP12, "DeleteUnusedDP12Displays", OPTV_BOOLEAN, {0}, FALSE},
 	{-1, NULL, OPTV_NONE, {0}, FALSE}
 };
 
@@ -823,6 +824,10 @@ Bool AMDGPUPreInit_KMS(ScrnInfoPtr pScrn, int flags)
 		xf86DrvMsg(pScrn->scrnIndex, X_INFO,
 			   "KMS Pageflipping: %sabled\n",
 			   info->allowPageFlip ? "en" : "dis");
+	}
+
+	if (xf86ReturnOptValBool(info->Options, OPTION_DELETE_DP12, FALSE)) {
+		info->drmmode.delete_dp_12_displays = TRUE;
 	}
 
 	if (drmmode_pre_init(pScrn, &info->drmmode, pScrn->bitsPerPixel / 8) ==
