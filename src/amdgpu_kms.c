@@ -1055,7 +1055,7 @@ Bool AMDGPUScreenInit_KMS(SCREEN_INIT_ARGS_DECL)
 	MessageType from;
 	Bool value;
 	int driLevel;
-	char *s;
+	const char *s;
 	void *front_ptr;
 
 	pScrn->fbOffset = 0;
