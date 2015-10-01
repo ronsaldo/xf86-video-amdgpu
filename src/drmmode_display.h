@@ -43,7 +43,6 @@
 typedef struct {
 	int fd;
 	unsigned fb_id;
-	drmModeResPtr mode_res;
 	drmModeFBPtr mode_fb;
 	int cpp;
 	ScrnInfoPtr scrn;
@@ -52,6 +51,7 @@ typedef struct {
 	InputHandlerProc uevent_handler;
 #endif
 	drmEventContext event_context;
+	int count_crtcs;
 } drmmode_rec, *drmmode_ptr;
 
 typedef struct {

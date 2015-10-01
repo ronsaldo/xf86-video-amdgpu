@@ -832,7 +832,7 @@ Bool AMDGPUPreInit_KMS(ScrnInfoPtr pScrn, int flags)
 		goto fail;
 	}
 
-	if (info->drmmode.mode_res->count_crtcs == 1)
+	if (info->drmmode.count_crtcs == 1)
 		pAMDGPUEnt->HasCRTC2 = FALSE;
 	else
 		pAMDGPUEnt->HasCRTC2 = TRUE;

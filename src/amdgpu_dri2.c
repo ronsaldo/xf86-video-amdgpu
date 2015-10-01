@@ -1419,7 +1419,7 @@ Bool amdgpu_dri2_screen_init(ScreenPtr pScreen)
 	dri2_info.DestroyBuffer = amdgpu_dri2_destroy_buffer;
 	dri2_info.CopyRegion = amdgpu_dri2_copy_region;
 
-	if (info->drmmode.mode_res->count_crtcs > 2) {
+	if (info->drmmode.count_crtcs > 2) {
 #ifdef DRM_CAP_VBLANK_HIGH_CRTC
 		uint64_t cap_value;
 
