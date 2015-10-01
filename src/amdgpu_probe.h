@@ -37,11 +37,16 @@
 #define _AMDGPU_PROBE_H_ 1
 
 #include <stdint.h>
+#include "xorg-server.h"
 #include "xf86str.h"
 #include "xf86DDC.h"
 #include "randrstr.h"
 
 #include "xf86Crtc.h"
+
+#ifdef XSERVER_PLATFORM_BUS
+#include "xf86platformBus.h"
+#endif
 
 #include <amdgpu.h>
 
@@ -82,6 +87,7 @@ typedef struct {
 	unsigned long fd_wakeup_registered;	/* server generation for which fd has been registered for wakeup handling */
 	int fd_wakeup_ref;
 	unsigned int assigned_crtcs;
+	struct xf86_platform_device *platform_dev;
 } AMDGPUEntRec, *AMDGPUEntPtr;
 
 extern const OptionInfoRec *AMDGPUOptionsWeak(void);

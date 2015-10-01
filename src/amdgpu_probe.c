@@ -112,10 +112,20 @@ static Bool amdgpu_kernel_mode_enabled(ScrnInfoPtr pScrn,
 	return TRUE;
 }
 
-static int amdgpu_kernel_open_fd(ScrnInfoPtr pScrn, struct pci_device *dev)
+static int amdgpu_kernel_open_fd(ScrnInfoPtr pScrn, struct pci_device *dev,
+				 struct xf86_platform_device *platform_dev)
 {
 	char *busid;
 	int fd;
+
+#ifdef XF86_PDEV_SERVER_FD
+	if (platform_dev) {
+		fd = xf86_get_platform_device_int_attrib(platform_dev,
+							 ODEV_ATTRIB_FD, -1);
+		if (fd != -1)
+			return fd;
+	}
+#endif
 
 #if XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(1,9,99,901,0)
 	XNFasprintf(&busid, "pci:%04x:%02x:%02x.%d",
@@ -153,7 +163,7 @@ static Bool amdgpu_open_drm_master(ScrnInfoPtr pScrn)
 		return TRUE;
 	}
 
-	info->dri2.drm_fd = amdgpu_kernel_open_fd(pScrn, info->PciInfo);
+	info->dri2.drm_fd = amdgpu_kernel_open_fd(pScrn, info->PciInfo, NULL);
 	if (info->dri2.drm_fd == -1)
 		return FALSE;
 
@@ -280,7 +290,11 @@ static Bool AMDGPUDriverFunc(ScrnInfoPtr scrn, xorgDriverFuncOp op, void *data)
 		flag = (CARD32 *) data;
 		(*flag) = 0;
 		return TRUE;
-	default:
+#if XORG_VERSION_CURRENT > XORG_VERSION_NUMERIC(1,15,99,0,0)
+	case SUPPORTS_SERVER_FDS:
+		return TRUE;
+#endif
+       default:
 		return FALSE;
 	}
 }
@@ -343,7 +357,7 @@ amdgpu_platform_probe(DriverPtr pDriver,
 		pPriv->ptr = xnfcalloc(sizeof(AMDGPUEntRec), 1);
 		pAMDGPUEnt = pPriv->ptr;
 		pAMDGPUEnt->HasSecondary = FALSE;
-		pAMDGPUEnt->fd = amdgpu_kernel_open_fd(pScrn, dev->pdev);
+		pAMDGPUEnt->fd = amdgpu_kernel_open_fd(pScrn, dev->pdev, dev);
 		if (pAMDGPUEnt->fd < 0)
 			goto error_fd;
 
@@ -361,6 +375,7 @@ amdgpu_platform_probe(DriverPtr pDriver,
 		pAMDGPUEnt = pPriv->ptr;
 		pAMDGPUEnt->HasSecondary = TRUE;
 	}
+	pAMDGPUEnt->platform_dev = dev;
 
 	xf86SetEntityInstanceForScreen(pScrn, pEnt->index,
 				       xf86GetNumEntityInstances(pEnt->

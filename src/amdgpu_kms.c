@@ -126,7 +126,11 @@ static void AMDGPUFreeRec(ScrnInfoPtr pScrn)
 		pAMDGPUEnt->fd_ref--;
 		if (!pAMDGPUEnt->fd_ref) {
 			amdgpu_device_deinitialize(pAMDGPUEnt->pDev);
-			drmClose(pAMDGPUEnt->fd);
+#ifdef XF86_PDEV_SERVER_FD
+			if (!(pAMDGPUEnt->platform_dev &&
+			      pAMDGPUEnt->platform_dev->flags & XF86_PDEV_SERVER_FD))
+#endif
+				drmClose(pAMDGPUEnt->fd);
 			pAMDGPUEnt->fd = 0;
 		}
 	}
@@ -937,6 +941,41 @@ void AMDGPUUnblank(ScrnInfoPtr pScrn)
 	}
 }
 
+static Bool amdgpu_set_drm_master(ScrnInfoPtr pScrn)
+{
+	AMDGPUInfoPtr info  = AMDGPUPTR(pScrn);
+	AMDGPUEntPtr pAMDGPUEnt = AMDGPUEntPriv(pScrn);
+	int err;
+
+#ifdef XF86_PDEV_SERVER_FD
+	if (pAMDGPUEnt->platform_dev &&
+	    (pAMDGPUEnt->platform_dev->flags & XF86_PDEV_SERVER_FD))
+		return TRUE;
+#endif
+
+	err = drmSetMaster(info->dri2.drm_fd);
+	if (err)
+		ErrorF("Unable to retrieve master\n");
+
+	return err == 0;
+}
+
+static void amdgpu_drop_drm_master(ScrnInfoPtr pScrn)
+{
+	AMDGPUInfoPtr  info  = AMDGPUPTR(pScrn);
+	AMDGPUEntPtr pAMDGPUEnt = AMDGPUEntPriv(pScrn);
+
+#ifdef XF86_PDEV_SERVER_FD
+	if (pAMDGPUEnt->platform_dev &&
+	    (pAMDGPUEnt->platform_dev->flags & XF86_PDEV_SERVER_FD))
+		return;
+#endif
+
+	drmDropMaster(info->dri2.drm_fd);
+}
+
+
+
 static Bool AMDGPUSaveScreen_KMS(ScreenPtr pScreen, int mode)
 {
 	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
@@ -980,8 +1019,7 @@ static Bool AMDGPUCloseScreen_KMS(CLOSE_SCREEN_ARGS_DECL)
 	DeleteCallback(&FlushCallback, amdgpu_flush_callback, pScrn);
 
 	amdgpu_sync_close(pScreen);
-
-	drmDropMaster(info->dri2.drm_fd);
+	amdgpu_drop_drm_master(pScrn);
 
 	drmmode_fini(pScrn, &info->drmmode);
 	if (info->dri2.enabled) {
@@ -1019,7 +1057,6 @@ Bool AMDGPUScreenInit_KMS(SCREEN_INIT_ARGS_DECL)
 	int driLevel;
 	char *s;
 	void *front_ptr;
-	int ret;
 
 	pScrn->fbOffset = 0;
 
@@ -1030,11 +1067,9 @@ Bool AMDGPUScreenInit_KMS(SCREEN_INIT_ARGS_DECL)
 		return FALSE;
 	miSetPixmapDepths();
 
-	ret = drmSetMaster(info->dri2.drm_fd);
-	if (ret) {
-		ErrorF("Unable to retrieve master\n");
+	if (!amdgpu_set_drm_master(pScrn))
 		return FALSE;
-	}
+
 	info->directRenderingEnabled = FALSE;
 	if (info->shadow_fb == FALSE)
 		info->directRenderingEnabled = amdgpu_dri2_screen_init(pScreen);
@@ -1254,14 +1289,11 @@ Bool AMDGPUEnterVT_KMS(VT_FUNC_ARGS_DECL)
 {
 	SCRN_INFO_PTR(arg);
 	AMDGPUInfoPtr info = AMDGPUPTR(pScrn);
-	int ret;
 
 	xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, AMDGPU_LOGLEVEL_DEBUG,
 		       "AMDGPUEnterVT_KMS\n");
 
-	ret = drmSetMaster(info->dri2.drm_fd);
-	if (ret)
-		ErrorF("Unable to retrieve master\n");
+	amdgpu_set_drm_master(pScrn);
 
 	pScrn->vtSema = TRUE;
 
@@ -1274,12 +1306,11 @@ Bool AMDGPUEnterVT_KMS(VT_FUNC_ARGS_DECL)
 void AMDGPULeaveVT_KMS(VT_FUNC_ARGS_DECL)
 {
 	SCRN_INFO_PTR(arg);
-	AMDGPUInfoPtr info = AMDGPUPTR(pScrn);
 
 	xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, AMDGPU_LOGLEVEL_DEBUG,
 		       "AMDGPULeaveVT_KMS\n");
 
-	drmDropMaster(info->dri2.drm_fd);
+	amdgpu_drop_drm_master(pScrn);
 
 	xf86RotateFreeShadow(pScrn);
 	drmmode_scanout_free(pScrn);
