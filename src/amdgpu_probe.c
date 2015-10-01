@@ -43,6 +43,7 @@
 
 #include "amdgpu_probe.h"
 #include "amdgpu_version.h"
+#include "amdgpu_drv.h"
 #include "amdpciids.h"
 
 #include "xf86.h"
@@ -114,8 +115,6 @@ static Bool amdgpu_kernel_mode_enabled(ScrnInfoPtr pScrn,
 static int amdgpu_kernel_open_fd(ScrnInfoPtr pScrn, struct pci_device *dev)
 {
 	char *busid;
-	drmSetVersion sv;
-	int err;
 	int fd;
 
 #if XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(1,9,99,901,0)
@@ -135,6 +134,28 @@ static int amdgpu_kernel_open_fd(ScrnInfoPtr pScrn, struct pci_device *dev)
 		return fd;
 	}
 	free(busid);
+	return fd;
+}
+
+static Bool amdgpu_open_drm_master(ScrnInfoPtr pScrn)
+{
+	AMDGPUInfoPtr  info   = AMDGPUPTR(pScrn);
+	AMDGPUEntPtr pAMDGPUEnt = AMDGPUEntPriv(pScrn);
+	drmSetVersion sv;
+	int err;
+
+	if (pAMDGPUEnt->fd) {
+		xf86DrvMsg(pScrn->scrnIndex, X_INFO,
+			   " reusing fd for second head\n");
+
+		info->drmmode.fd = info->dri2.drm_fd = pAMDGPUEnt->fd;
+		pAMDGPUEnt->fd_ref++;
+		return TRUE;
+	}
+
+	info->dri2.drm_fd = amdgpu_kernel_open_fd(pScrn, info->PciInfo);
+	if (info->dri2.drm_fd == -1)
+		return FALSE;
 
 	/* Check that what we opened was a master or a master-capable FD,
 	 * by setting the version of the interface we'll use to talk to it.
@@ -144,15 +165,15 @@ static int amdgpu_kernel_open_fd(ScrnInfoPtr pScrn, struct pci_device *dev)
 	sv.drm_di_minor = 1;
 	sv.drm_dd_major = -1;
 	sv.drm_dd_minor = -1;
-	err = drmSetInterfaceVersion(fd, &sv);
+	err = drmSetInterfaceVersion(info->dri2.drm_fd, &sv);
 	if (err != 0) {
 		xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
 			   "[drm] failed to set drm interface version.\n");
-		drmClose(fd);
-		return -1;
+		drmClose(info->dri2.drm_fd);
+		return FALSE;
 	}
 
-	return fd;
+	return TRUE;
 }
 
 static Bool amdgpu_get_scrninfo(int entity_num, void *pci_dev)
@@ -208,9 +229,9 @@ static Bool amdgpu_get_scrninfo(int entity_num, void *pci_dev)
 		pAMDGPUEnt = pPriv->ptr;
 		pAMDGPUEnt->HasSecondary = FALSE;
 
-		pAMDGPUEnt->fd = amdgpu_kernel_open_fd(pScrn, pci_dev);
-		if (pAMDGPUEnt->fd < 0)
+		if (amdgpu_open_drm_master(pScrn)) {
 			goto error_fd;
+		}
 
 		pAMDGPUEnt->fd_ref = 1;
 
