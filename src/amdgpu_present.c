@@ -213,6 +213,9 @@ amdgpu_present_check_flip(RRCrtcPtr crtc, WindowPtr window, PixmapPtr pixmap,
 	ScreenPtr screen = window->drawable.pScreen;
 	ScrnInfoPtr scrn = xf86ScreenToScrn(screen);
 	AMDGPUInfoPtr info = AMDGPUPTR(scrn);
+	xf86CrtcConfigPtr config = XF86_CRTC_CONFIG_PTR(scrn);
+	int num_crtcs_on;
+	int i;
 
 	if (!scrn->vtSema)
 		return FALSE;
@@ -226,17 +229,20 @@ amdgpu_present_check_flip(RRCrtcPtr crtc, WindowPtr window, PixmapPtr pixmap,
 	if (info->drmmode.dri2_flipping)
 		return FALSE;
 
-	if (crtc) {
-		xf86CrtcPtr xf86_crtc = crtc->devPrivate;
-		drmmode_crtc_private_ptr drmmode_crtc = xf86_crtc->driver_private;
+	for (i = 0, num_crtcs_on = 0; i < config->num_crtc; i++) {
+		drmmode_crtc_private_ptr drmmode_crtc = config->crtc[i]->driver_private;
 
-		if (!drmmode_crtc ||
-		    drmmode_crtc->rotate.bo != NULL ||
-		    drmmode_crtc->dpms_mode != DPMSModeOn)
+		if (!config->crtc[i]->enabled)
+			continue;
+
+		if (!drmmode_crtc || drmmode_crtc->rotate.bo != NULL)
 			return FALSE;
+
+		if (drmmode_crtc->dpms_mode == DPMSModeOn)
+			num_crtcs_on++;
 	}
 
-	return TRUE;
+	return num_crtcs_on > 0;
 }
 
 /*
