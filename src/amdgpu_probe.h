@@ -75,11 +75,8 @@ typedef struct {
 } AMDGPUCardInfo;
 
 typedef struct {
-	Bool HasSecondary;
 	Bool HasCRTC2;		/* All cards except original Radeon  */
 
-	ScrnInfoPtr pSecondaryScrn;
-	ScrnInfoPtr pPrimaryScrn;
 	amdgpu_device_handle pDev;
 
 	int fd;			/* for sharing across zaphod heads   */

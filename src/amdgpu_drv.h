@@ -223,7 +223,6 @@ typedef struct {
 #endif
 
 	Bool IsSecondary;
-	Bool IsPrimary;
 
 	Bool shadow_fb;
 	void *fb_shadow;

@@ -724,7 +724,6 @@ Bool AMDGPUPreInit_KMS(ScrnInfoPtr pScrn, int flags)
 
 	info = AMDGPUPTR(pScrn);
 	info->IsSecondary = FALSE;
-	info->IsPrimary = FALSE;
 	info->pEnt =
 	    xf86GetEntityInfo(pScrn->entityList[pScrn->numEntities - 1]);
 	if (info->pEnt->location.type != BUS_PCI
@@ -741,12 +740,8 @@ Bool AMDGPUPreInit_KMS(ScrnInfoPtr pScrn, int flags)
 	if (xf86IsEntityShared(pScrn->entityList[0])) {
 		if (xf86IsPrimInitDone(pScrn->entityList[0])) {
 			info->IsSecondary = TRUE;
-			pAMDGPUEnt->pSecondaryScrn = pScrn;
 		} else {
-			info->IsPrimary = TRUE;
 			xf86SetPrimInitDone(pScrn->entityList[0]);
-			pAMDGPUEnt->pPrimaryScrn = pScrn;
-			pAMDGPUEnt->HasSecondary = FALSE;
 		}
 	}
 

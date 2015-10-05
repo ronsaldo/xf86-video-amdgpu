@@ -237,7 +237,6 @@ static Bool amdgpu_get_scrninfo(int entity_num, void *pci_dev)
 
 		pPriv->ptr = xnfcalloc(sizeof(AMDGPUEntRec), 1);
 		pAMDGPUEnt = pPriv->ptr;
-		pAMDGPUEnt->HasSecondary = FALSE;
 
 		if (amdgpu_open_drm_master(pScrn)) {
 			goto error_fd;
@@ -255,7 +254,6 @@ static Bool amdgpu_get_scrninfo(int entity_num, void *pci_dev)
 		}
 	} else {
 		pAMDGPUEnt = pPriv->ptr;
-		pAMDGPUEnt->HasSecondary = TRUE;
 	}
 
 	xf86SetEntityInstanceForScreen(pScrn, pEnt->index,
@@ -356,7 +354,6 @@ amdgpu_platform_probe(DriverPtr pDriver,
 
 		pPriv->ptr = xnfcalloc(sizeof(AMDGPUEntRec), 1);
 		pAMDGPUEnt = pPriv->ptr;
-		pAMDGPUEnt->HasSecondary = FALSE;
 		pAMDGPUEnt->fd = amdgpu_kernel_open_fd(pScrn, dev->pdev, dev);
 		if (pAMDGPUEnt->fd < 0)
 			goto error_fd;
@@ -373,7 +370,6 @@ amdgpu_platform_probe(DriverPtr pDriver,
 		}
 	} else {
 		pAMDGPUEnt = pPriv->ptr;
-		pAMDGPUEnt->HasSecondary = TRUE;
 	}
 	pAMDGPUEnt->platform_dev = dev;
 
