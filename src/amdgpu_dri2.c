@@ -528,6 +528,7 @@ static void
 amdgpu_dri2_flip_event_handler(ScrnInfoPtr scrn, uint32_t frame, uint64_t usec,
 			       void *event_data)
 {
+	AMDGPUInfoPtr info = AMDGPUPTR(scrn);
 	DRI2FrameEventPtr flip = event_data;
 	unsigned tv_sec, tv_usec;
 	DrawablePtr drawable;
@@ -572,6 +573,7 @@ amdgpu_dri2_flip_event_handler(ScrnInfoPtr scrn, uint32_t frame, uint64_t usec,
 		DRI2SwapComplete(flip->client, drawable, frame, tv_sec, tv_usec,
 				 DRI2_FLIP_COMPLETE, flip->event_complete,
 				 flip->event_data);
+		info->drmmode.dri2_flipping = FALSE;
 		break;
 	default:
 		xf86DrvMsg(scrn->scrnIndex, X_WARNING,
@@ -590,6 +592,7 @@ amdgpu_dri2_schedule_flip(ScrnInfoPtr scrn, ClientPtr client,
 			  DRI2BufferPtr back, DRI2SwapEventPtr func,
 			  void *data, unsigned int target_msc)
 {
+	AMDGPUInfoPtr info = AMDGPUPTR(scrn);
 	struct dri2_buffer_priv *back_priv;
 	struct amdgpu_buffer *bo = NULL;
 	DRI2FrameEventPtr flip_info;
@@ -616,10 +619,14 @@ amdgpu_dri2_schedule_flip(ScrnInfoPtr scrn, ClientPtr client,
 	back_priv = back->driverPrivate;
 	bo = amdgpu_get_pixmap_bo(back_priv->pixmap);
 
-	return amdgpu_do_pageflip(scrn, client, bo, AMDGPU_DRM_QUEUE_ID_DEFAULT,
-				  flip_info, ref_crtc_hw_id,
-				  amdgpu_dri2_flip_event_handler,
-				  amdgpu_dri2_flip_event_abort);
+	if (amdgpu_do_pageflip(scrn, client, bo, AMDGPU_DRM_QUEUE_ID_DEFAULT,
+			       flip_info, ref_crtc_hw_id,
+			       amdgpu_dri2_flip_event_handler,
+			       amdgpu_dri2_flip_event_abort)) {
+		info->drmmode.dri2_flipping = TRUE;
+		return TRUE;
+	}
+	return FALSE;
 }
 
 static Bool update_front(DrawablePtr draw, DRI2BufferPtr front)
@@ -698,8 +705,11 @@ static Bool
 can_flip(ScrnInfoPtr pScrn, DrawablePtr draw,
 	 DRI2BufferPtr front, DRI2BufferPtr back)
 {
+	AMDGPUInfoPtr info = AMDGPUPTR(pScrn);
+
 	return draw->type == DRAWABLE_WINDOW &&
-	    AMDGPUPTR(pScrn)->allowPageFlip &&
+	    info->allowPageFlip &&
+	    !info->drmmode.present_flipping &&
 	    pScrn->vtSema &&
 	    DRI2CanFlip(draw) && can_exchange(pScrn, draw, front, back);
 }

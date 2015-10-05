@@ -50,6 +50,7 @@
 
 struct amdgpu_present_vblank_event {
 	uint64_t event_id;
+	xf86CrtcPtr crtc;
 };
 
 static uint32_t crtc_select(int crtc_id)
@@ -222,6 +223,9 @@ amdgpu_present_check_flip(RRCrtcPtr crtc, WindowPtr window, PixmapPtr pixmap,
 	if (!sync_flip)
 		return FALSE;
 
+	if (info->drmmode.dri2_flipping)
+		return FALSE;
+
 	if (crtc) {
 		xf86CrtcPtr xf86_crtc = crtc->devPrivate;
 		drmmode_crtc_private_ptr drmmode_crtc = xf86_crtc->driver_private;
@@ -242,7 +246,11 @@ amdgpu_present_check_flip(RRCrtcPtr crtc, WindowPtr window, PixmapPtr pixmap,
 static void
 amdgpu_present_flip_event(ScrnInfoPtr scrn, uint32_t msc, uint64_t ust, void *pageflip_data)
 {
+	AMDGPUInfoPtr info = AMDGPUPTR(scrn);
 	struct amdgpu_present_vblank_event *event = pageflip_data;
+
+	if (!event->crtc)
+		info->drmmode.present_flipping = FALSE;
 
 	present_event_notify(event->event_id, ust, msc);
 	free(event);
@@ -269,6 +277,7 @@ amdgpu_present_flip(RRCrtcPtr crtc, uint64_t event_id, uint64_t target_msc,
 {
 	ScreenPtr screen = crtc->pScreen;
 	ScrnInfoPtr scrn = xf86ScreenToScrn(screen);
+	AMDGPUInfoPtr info = AMDGPUPTR(scrn);
 	struct amdgpu_present_vblank_event *event;
 	xf86CrtcPtr xf86_crtc = crtc->devPrivate;
 	int crtc_id = xf86_crtc ? drmmode_get_crtc_id(xf86_crtc) : -1;
@@ -287,6 +296,7 @@ amdgpu_present_flip(RRCrtcPtr crtc, uint64_t event_id, uint64_t target_msc,
 		return FALSE;
 
 	event->event_id = event_id;
+	event->crtc = xf86_crtc;
 
 	ret = amdgpu_do_pageflip(scrn, AMDGPU_DRM_QUEUE_CLIENT_DEFAULT, bo,
 				 event_id, event, crtc_id,
@@ -294,6 +304,8 @@ amdgpu_present_flip(RRCrtcPtr crtc, uint64_t event_id, uint64_t target_msc,
 				 amdgpu_present_flip_abort);
 	if (!ret)
 		xf86DrvMsg(scrn->scrnIndex, X_ERROR, "present flip failed\n");
+	else
+		info->drmmode.present_flipping = TRUE;
 
 	return ret;
 }
@@ -305,6 +317,7 @@ static void
 amdgpu_present_unflip(ScreenPtr screen, uint64_t event_id)
 {
 	ScrnInfoPtr scrn = xf86ScreenToScrn(screen);
+	AMDGPUInfoPtr info = AMDGPUPTR(scrn);
 	struct amdgpu_present_vblank_event *event;
 	PixmapPtr pixmap = screen->GetScreenPixmap(screen);
 	struct amdgpu_buffer *bo;
@@ -326,8 +339,10 @@ amdgpu_present_unflip(ScreenPtr screen, uint64_t event_id)
 	ret = amdgpu_do_pageflip(scrn, AMDGPU_DRM_QUEUE_CLIENT_DEFAULT, bo,
 				 event_id, event, -1, amdgpu_present_flip_event,
 				 amdgpu_present_flip_abort);
-	if (!ret)
+	if (!ret) {
 		xf86DrvMsg(scrn->scrnIndex, X_ERROR, "present unflip failed\n");
+		info->drmmode.present_flipping = FALSE;
+	}
 }
 
 static present_screen_info_rec amdgpu_present_screen_info = {
