@@ -318,31 +318,51 @@ amdgpu_present_unflip(ScreenPtr screen, uint64_t event_id)
 {
 	ScrnInfoPtr scrn = xf86ScreenToScrn(screen);
 	AMDGPUInfoPtr info = AMDGPUPTR(scrn);
+	xf86CrtcConfigPtr config = XF86_CRTC_CONFIG_PTR(scrn);
 	struct amdgpu_present_vblank_event *event;
 	PixmapPtr pixmap = screen->GetScreenPixmap(screen);
 	struct amdgpu_buffer *bo;
-	Bool ret;
+	int i;
 
 	if (!amdgpu_present_check_flip(NULL, screen->root, pixmap, TRUE))
-		return;
+		goto modeset;
 
 	bo = amdgpu_get_pixmap_bo(pixmap);
-	if (!bo)
-		return;
+	if (!bo) {
+		ErrorF("%s: amdgpu_get_pixmap_bo failed, display might freeze\n", __func__);
+		goto modeset;
+	}
 
 	event = calloc(1, sizeof(struct amdgpu_present_vblank_event));
-	if (!event)
-		return;
+	if (!event) {
+		ErrorF("%s: calloc failed, display might freeze\n", __func__);
+		goto modeset;
+	}
 
 	event->event_id = event_id;
 
-	ret = amdgpu_do_pageflip(scrn, AMDGPU_DRM_QUEUE_CLIENT_DEFAULT, bo,
-				 event_id, event, -1, amdgpu_present_flip_event,
-				 amdgpu_present_flip_abort);
-	if (!ret) {
-		xf86DrvMsg(scrn->scrnIndex, X_ERROR, "present unflip failed\n");
-		info->drmmode.present_flipping = FALSE;
+	if (amdgpu_do_pageflip(scrn, AMDGPU_DRM_QUEUE_CLIENT_DEFAULT, bo,
+			       event_id, event, -1, amdgpu_present_flip_event,
+			       amdgpu_present_flip_abort))
+		return;
+
+modeset:
+	for (i = 0; i < config->num_crtc; i++) {
+		xf86CrtcPtr crtc = config->crtc[i];
+		drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
+
+		if (!crtc->enabled)
+			continue;
+
+		if (drmmode_crtc->dpms_mode == DPMSModeOn)
+			crtc->funcs->set_mode_major(crtc, &crtc->mode, crtc->rotation,
+						    crtc->x, crtc->y);
+		else
+			drmmode_crtc->need_modeset = TRUE;
 	}
+
+	present_event_notify(event_id, 0, 0);
+	info->drmmode.present_flipping = FALSE;
 }
 
 static present_screen_info_rec amdgpu_present_screen_info = {
