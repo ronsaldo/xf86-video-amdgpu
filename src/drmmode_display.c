@@ -535,8 +535,11 @@ drmmode_crtc_scanout_create(xf86CrtcPtr crtc,
 		drmmode_crtc_scanout_destroy(drmmode, scanout);
 	}
 
-	if (!data)
+	if (!data) {
 		data = drmmode_crtc_scanout_allocate(crtc, scanout, width, height);
+		if (!data)
+			return NULL;
+	}
 
 	rotate_pitch = gbm_bo_get_stride(scanout->bo->bo.gbm);
 
