@@ -475,19 +475,11 @@ drmmode_crtc_scanout_allocate(xf86CrtcPtr crtc,
 			      int width, int height)
 {
 	ScrnInfoPtr pScrn = crtc->scrn;
-	AMDGPUInfoPtr info = AMDGPUPTR(pScrn);
 	drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
 	drmmode_ptr drmmode = drmmode_crtc->drmmode;
 	int ret;
 	int pitch;
 	union gbm_bo_handle bo_handle;
-
-	/* rotation requires acceleration */
-	if (info->shadow_fb) {
-		xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
-			   "Rotation requires acceleration!\n");
-		return NULL;
-	}
 
 	if (scanout->bo) {
 		if (scanout->width == width && scanout->height == height)
@@ -920,7 +912,7 @@ static Bool drmmode_set_scanout_pixmap(xf86CrtcPtr crtc, PixmapPtr ppix)
 }
 #endif
 
-static const xf86CrtcFuncsRec drmmode_crtc_funcs = {
+static xf86CrtcFuncsRec drmmode_crtc_funcs = {
 	.dpms = drmmode_crtc_dpms,
 	.set_mode_major = drmmode_set_mode_major,
 	.set_cursor_colors = drmmode_set_cursor_colors,
@@ -1874,6 +1866,7 @@ static void drm_wakeup_handler(pointer data, int err, pointer p)
 Bool drmmode_pre_init(ScrnInfoPtr pScrn, drmmode_ptr drmmode, int cpp)
 {
 	AMDGPUEntPtr pAMDGPUEnt = AMDGPUEntPriv(pScrn);
+	AMDGPUInfoPtr info = AMDGPUPTR(pScrn);
 	int i, num_dvi = 0, num_hdmi = 0;
 	unsigned int crtcs_needed = 0;
 	drmModeResPtr mode_res;
@@ -1897,6 +1890,13 @@ Bool drmmode_pre_init(ScrnInfoPtr pScrn, drmmode_ptr drmmode, int cpp)
 
 	xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, AMDGPU_LOGLEVEL_DEBUG,
 		       "%d crtcs needed for screen.\n", crtcs_needed);
+
+	if (!info->use_glamor) {
+		/* Rotation requires hardware acceleration */
+		drmmode_crtc_funcs.shadow_allocate = NULL;
+		drmmode_crtc_funcs.shadow_create = NULL;
+		drmmode_crtc_funcs.shadow_destroy = NULL;
+	}
 
 	for (i = 0; i < mode_res->count_crtcs; i++)
 		if (!xf86IsEntityShared(pScrn->entityList[0]) ||
