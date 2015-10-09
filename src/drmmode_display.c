@@ -513,7 +513,7 @@ drmmode_crtc_scanout_allocate(xf86CrtcPtr crtc,
 static PixmapPtr
 drmmode_crtc_scanout_create(xf86CrtcPtr crtc,
 			    struct drmmode_scanout *scanout,
-			    void *data, int width, int height)
+			    int width, int height)
 {
 	ScrnInfoPtr pScrn = crtc->scrn;
 	drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
@@ -527,9 +527,8 @@ drmmode_crtc_scanout_create(xf86CrtcPtr crtc,
 		drmmode_crtc_scanout_destroy(drmmode, scanout);
 	}
 
-	if (!data) {
-		data = drmmode_crtc_scanout_allocate(crtc, scanout, width, height);
-		if (!data)
+	if (!scanout->bo) {
+		if (!drmmode_crtc_scanout_allocate(crtc, scanout, width, height))
 			return NULL;
 	}
 
@@ -656,7 +655,7 @@ drmmode_set_mode_major(xf86CrtcPtr crtc, DisplayModePtr mode,
 			for (i = 0; i < (info->tear_free ? 2 : 1); i++) {
 				drmmode_crtc_scanout_create(crtc,
 							    &drmmode_crtc->scanout[i],
-							    NULL, mode->HDisplay,
+							    mode->HDisplay,
 							    mode->VDisplay);
 
 				if (drmmode_crtc->scanout[i].pixmap) {
@@ -819,8 +818,11 @@ drmmode_crtc_shadow_create(xf86CrtcPtr crtc, void *data, int width, int height)
 {
 	drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
 
-	return drmmode_crtc_scanout_create(crtc, &drmmode_crtc->rotate, data,
-					   width, height);
+	/* Xorg passes in the return value of drmmode_crtc_shadow_allocate
+	 * for data, but that's redundant for drmmode_crtc_scanout_create.
+	 */
+	return drmmode_crtc_scanout_create(crtc, &drmmode_crtc->rotate, width,
+					   height);
 }
 
 static void
