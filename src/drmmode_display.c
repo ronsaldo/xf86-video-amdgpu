@@ -503,6 +503,9 @@ drmmode_crtc_scanout_allocate(xf86CrtcPtr crtc,
 			   bo_handle.u32, &scanout->fb_id);
 	if (ret) {
 		ErrorF("failed to add rotate fb\n");
+		amdgpu_bo_unref(&scanout->bo);
+		scanout->bo = NULL;
+		return NULL;
 	}
 
 	scanout->width = width;
