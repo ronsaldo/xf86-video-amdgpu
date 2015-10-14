@@ -153,7 +153,7 @@ amdgpu_dri2_create_buffer2(ScreenPtr pScreen,
 	AMDGPUInfoPtr info = AMDGPUPTR(pScrn);
 	BufferPtr buffers;
 	struct dri2_buffer_priv *privates;
-	PixmapPtr pixmap, depth_pixmap;
+	PixmapPtr pixmap;
 	struct amdgpu_buffer *bo = NULL;
 	unsigned front_width;
 	unsigned aligned_width = drawable->width;
@@ -180,10 +180,9 @@ amdgpu_dri2_create_buffer2(ScreenPtr pScreen,
 		cpp = drawable->bitsPerPixel / 8;
 	}
 
-	pixmap = pScreen->GetScreenPixmap(pScreen);
-	front_width = pixmap->drawable.width;
+	front_width = pScreen->GetScreenPixmap(pScreen)->drawable.width;
 
-	pixmap = depth_pixmap = NULL;
+	pixmap = NULL;
 
 	if (attachment == DRI2BufferFrontLeft) {
 		pixmap = get_drawable_pixmap(drawable);
@@ -196,9 +195,6 @@ amdgpu_dri2_create_buffer2(ScreenPtr pScreen,
 			pixmap = NULL;
 		} else
 			pixmap->refcnt++;
-	} else if (attachment == DRI2BufferStencil && depth_pixmap) {
-		pixmap = depth_pixmap;
-		pixmap->refcnt++;
 	}
 
 	if (!pixmap && (is_glamor_pixmap || attachment != DRI2BufferFrontLeft)) {
@@ -215,10 +211,6 @@ amdgpu_dri2_create_buffer2(ScreenPtr pScreen,
 	buffers = calloc(1, sizeof *buffers);
 	if (buffers == NULL)
 		goto error;
-
-	if (attachment == DRI2BufferDepth) {
-		depth_pixmap = pixmap;
-	}
 
 	if (pixmap) {
 		struct drm_gem_flink flink;
