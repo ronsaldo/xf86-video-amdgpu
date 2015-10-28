@@ -41,7 +41,6 @@
 #endif
 
 typedef struct {
-	int fd;
 	unsigned fb_id;
 	drmModeFBPtr mode_fb;
 	int cpp;
@@ -60,7 +59,7 @@ typedef struct {
 } drmmode_rec, *drmmode_ptr;
 
 typedef struct {
-	drmmode_ptr drmmode;
+	int fd;
 	unsigned old_fb_id;
 	int flip_count;
 	void *event_data;

@@ -109,7 +109,9 @@ Bool amdgpu_glamor_pre_init(ScrnInfoPtr scrn)
 				   "Incompatible glamor version, required >= 0.3.0.\n");
 			return FALSE;
 		} else {
-			if (glamor_egl_init(scrn, info->dri2.drm_fd)) {
+			AMDGPUEntPtr pAMDGPUEnt = AMDGPUEntPriv(scrn);
+
+			if (glamor_egl_init(scrn, pAMDGPUEnt->fd)) {
 				xf86DrvMsg(scrn->scrnIndex, X_INFO,
 					   "glamor detected, initialising EGL layer.\n");
 			} else {

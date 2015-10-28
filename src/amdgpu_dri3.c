@@ -44,6 +44,7 @@ static int
 amdgpu_dri3_open(ScreenPtr screen, RRProviderPtr provider, int *out)
 {
 	ScrnInfoPtr scrn = xf86ScreenToScrn(screen);
+	AMDGPUEntPtr pAMDGPUEnt = AMDGPUEntPriv(scrn);
 	AMDGPUInfoPtr info = AMDGPUPTR(scrn);
 	drm_magic_t magic;
 	int fd;
@@ -77,7 +78,7 @@ amdgpu_dri3_open(ScreenPtr screen, RRProviderPtr provider, int *out)
 		}
 	}
 
-	if (drmAuthMagic(info->dri2.drm_fd, magic) < 0) {
+	if (drmAuthMagic(pAMDGPUEnt->fd, magic) < 0) {
 		close(fd);
 		return BadMatch;
 	}

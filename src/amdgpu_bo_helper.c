@@ -133,19 +133,18 @@ Bool amdgpu_bo_get_handle(struct amdgpu_buffer *bo, uint32_t *handle)
 
 int amdgpu_bo_map(ScrnInfoPtr pScrn, struct amdgpu_buffer *bo)
 {
-	AMDGPUInfoPtr info = AMDGPUPTR(pScrn);
 	int ret = 0;
 
 	if (bo->flags & AMDGPU_BO_FLAGS_GBM) {
+		AMDGPUEntPtr pAMDGPUEnt = AMDGPUEntPriv(pScrn);
 		uint32_t handle, stride, height;
 		union drm_amdgpu_gem_mmap args;
-		int fd;
+		int fd = pAMDGPUEnt->fd;
 		void *ptr;
 
 		handle = gbm_bo_get_handle(bo->bo.gbm).u32;
 		stride = gbm_bo_get_stride(bo->bo.gbm);
 		height = gbm_bo_get_height(bo->bo.gbm);
-		fd = info->dri2.drm_fd;
 
 		memset(&args, 0, sizeof(union drm_amdgpu_gem_mmap));
 		args.in.handle = handle;
