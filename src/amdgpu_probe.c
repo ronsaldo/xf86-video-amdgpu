@@ -245,6 +245,7 @@ static Bool amdgpu_get_scrninfo(int entity_num, struct pci_device *pci_dev)
 		}
 	} else {
 		pAMDGPUEnt = pPriv->ptr;
+		pAMDGPUEnt->fd_ref++;
 	}
 
 	xf86SetEntityInstanceForScreen(pScrn, pEnt->index,
@@ -360,6 +361,7 @@ amdgpu_platform_probe(DriverPtr pDriver,
 		}
 	} else {
 		pAMDGPUEnt = pPriv->ptr;
+		pAMDGPUEnt->fd_ref++;
 	}
 	pAMDGPUEnt->platform_dev = dev;
 

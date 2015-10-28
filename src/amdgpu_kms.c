@@ -624,13 +624,6 @@ static Bool AMDGPUPreInitChipType_KMS(ScrnInfoPtr pScrn)
 	return TRUE;
 }
 
-static void amdgpu_reference_drm_fd(ScrnInfoPtr pScrn)
-{
-	AMDGPUEntPtr pAMDGPUEnt = AMDGPUEntPriv(pScrn);
-
-	pAMDGPUEnt->fd_ref++;
-}
-
 static Bool amdgpu_get_tile_config(ScrnInfoPtr pScrn)
 {
 	AMDGPUInfoPtr info = AMDGPUPTR(pScrn);
@@ -766,8 +759,6 @@ Bool AMDGPUPreInit_KMS(ScrnInfoPtr pScrn, int flags)
 
 	if (!AMDGPUPreInitChipType_KMS(pScrn))
 		goto fail;
-
-	amdgpu_reference_drm_fd(pScrn);
 
 	info->dri2.available = FALSE;
 	info->dri2.enabled = FALSE;
