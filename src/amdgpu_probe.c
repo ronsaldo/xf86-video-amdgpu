@@ -147,14 +147,14 @@ static int amdgpu_kernel_open_fd(ScrnInfoPtr pScrn, struct pci_device *dev,
 	return fd;
 }
 
-static Bool amdgpu_open_drm_master(ScrnInfoPtr pScrn)
+static Bool amdgpu_open_drm_master(ScrnInfoPtr pScrn, AMDGPUEntPtr pAMDGPUEnt,
+				   struct pci_device *pci_dev)
 {
-	AMDGPUInfoPtr  info   = AMDGPUPTR(pScrn);
 	drmSetVersion sv;
 	int err;
 
-	info->dri2.drm_fd = amdgpu_kernel_open_fd(pScrn, info->PciInfo, NULL);
-	if (info->dri2.drm_fd == -1)
+	pAMDGPUEnt->fd = amdgpu_kernel_open_fd(pScrn, pci_dev, NULL);
+	if (pAMDGPUEnt->fd == -1)
 		return FALSE;
 
 	/* Check that what we opened was a master or a master-capable FD,
@@ -165,11 +165,11 @@ static Bool amdgpu_open_drm_master(ScrnInfoPtr pScrn)
 	sv.drm_di_minor = 1;
 	sv.drm_dd_major = -1;
 	sv.drm_dd_minor = -1;
-	err = drmSetInterfaceVersion(info->dri2.drm_fd, &sv);
+	err = drmSetInterfaceVersion(pAMDGPUEnt->fd, &sv);
 	if (err != 0) {
 		xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
 			   "[drm] failed to set drm interface version.\n");
-		drmClose(info->dri2.drm_fd);
+		drmClose(pAMDGPUEnt->fd);
 		return FALSE;
 	}
 
@@ -226,11 +226,12 @@ static Bool amdgpu_get_scrninfo(int entity_num, void *pci_dev)
 		uint32_t minor_version;
 
 		pPriv->ptr = xnfcalloc(sizeof(AMDGPUEntRec), 1);
-		pAMDGPUEnt = pPriv->ptr;
+		if (!pPriv->ptr)
+			return FALSE;
 
-		if (amdgpu_open_drm_master(pScrn)) {
+		pAMDGPUEnt = pPriv->ptr;
+		if (!amdgpu_open_drm_master(pScrn, pAMDGPUEnt, pci_dev))
 			goto error_fd;
-		}
 
 		pAMDGPUEnt->fd_ref = 1;
 
