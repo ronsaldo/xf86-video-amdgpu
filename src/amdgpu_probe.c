@@ -150,18 +150,8 @@ static int amdgpu_kernel_open_fd(ScrnInfoPtr pScrn, struct pci_device *dev,
 static Bool amdgpu_open_drm_master(ScrnInfoPtr pScrn)
 {
 	AMDGPUInfoPtr  info   = AMDGPUPTR(pScrn);
-	AMDGPUEntPtr pAMDGPUEnt = AMDGPUEntPriv(pScrn);
 	drmSetVersion sv;
 	int err;
-
-	if (pAMDGPUEnt->fd) {
-		xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-			   " reusing fd for second head\n");
-
-		info->drmmode.fd = info->dri2.drm_fd = pAMDGPUEnt->fd;
-		pAMDGPUEnt->fd_ref++;
-		return TRUE;
-	}
 
 	info->dri2.drm_fd = amdgpu_kernel_open_fd(pScrn, info->PciInfo, NULL);
 	if (info->dri2.drm_fd == -1)
@@ -266,7 +256,6 @@ static Bool amdgpu_get_scrninfo(int entity_num, void *pci_dev)
 
 error_amdgpu:
 	drmClose(pAMDGPUEnt->fd);
-	pAMDGPUEnt->fd = 0;
 error_fd:
 	free(pPriv->ptr);
 	return FALSE;
@@ -383,7 +372,6 @@ amdgpu_platform_probe(DriverPtr pDriver,
 
 error_amdgpu:
 	drmClose(pAMDGPUEnt->fd);
-	pAMDGPUEnt->fd = 0;
 error_fd:
 	free(pPriv->ptr);
 	return FALSE;
