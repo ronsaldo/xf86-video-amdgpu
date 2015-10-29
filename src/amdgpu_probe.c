@@ -176,7 +176,7 @@ static Bool amdgpu_open_drm_master(ScrnInfoPtr pScrn, AMDGPUEntPtr pAMDGPUEnt,
 	return TRUE;
 }
 
-static Bool amdgpu_get_scrninfo(int entity_num, void *pci_dev)
+static Bool amdgpu_get_scrninfo(int entity_num, struct pci_device *pci_dev)
 {
 	ScrnInfoPtr pScrn = NULL;
 	EntityInfoPtr pEnt;
@@ -266,7 +266,7 @@ static Bool
 amdgpu_pci_probe(DriverPtr pDriver,
 		 int entity_num, struct pci_device *device, intptr_t match_data)
 {
-	return amdgpu_get_scrninfo(entity_num, (void *)device);
+	return amdgpu_get_scrninfo(entity_num, device);
 }
 
 static Bool AMDGPUDriverFunc(ScrnInfoPtr scrn, xorgDriverFuncOp op, void *data)
