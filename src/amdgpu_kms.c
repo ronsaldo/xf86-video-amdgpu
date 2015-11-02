@@ -1031,14 +1031,9 @@ static Bool AMDGPUCloseScreen_KMS(CLOSE_SCREEN_ARGS_DECL)
 void AMDGPUFreeScreen_KMS(FREE_SCREEN_ARGS_DECL)
 {
 	SCRN_INFO_PTR(arg);
-	AMDGPUInfoPtr info = AMDGPUPTR(pScrn);
 
 	xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, AMDGPU_LOGLEVEL_DEBUG,
 		       "AMDGPUFreeScreen\n");
-
-	/* when server quits at PreInit, we don't need do this anymore */
-	if (!info)
-		return;
 
 	AMDGPUFreeRec(pScrn);
 }
