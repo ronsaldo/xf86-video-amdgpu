@@ -131,13 +131,13 @@ static int amdgpu_dri3_fd_from_pixmap(ScreenPtr screen,
 				      CARD16 *stride,
 				      CARD32 *size)
 {
-	ScrnInfoPtr scrn = xf86ScreenToScrn(screen);
-	AMDGPUInfoPtr info = AMDGPUPTR(scrn);
 	struct amdgpu_buffer *bo;
 	struct amdgpu_bo_info bo_info;
 	uint32_t fd;
-
 #ifdef USE_GLAMOR
+	ScrnInfoPtr scrn = xf86ScreenToScrn(screen);
+	AMDGPUInfoPtr info = AMDGPUPTR(scrn);
+
 	if (info->use_glamor)
 		return glamor_fd_from_pixmap(screen, pixmap, stride, size);
 #endif
