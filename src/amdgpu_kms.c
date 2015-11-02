@@ -107,7 +107,8 @@ static Bool AMDGPUGetRec(ScrnInfoPtr pScrn)
 /* Free our private AMDGPUInfoRec */
 static void AMDGPUFreeRec(ScrnInfoPtr pScrn)
 {
-	AMDGPUEntPtr pAMDGPUEnt = AMDGPUEntPriv(pScrn);
+	DevUnion *pPriv;
+	AMDGPUEntPtr pAMDGPUEnt;
 	AMDGPUInfoPtr info;
 
 	if (!pScrn)
@@ -117,6 +118,9 @@ static void AMDGPUFreeRec(ScrnInfoPtr pScrn)
 	if (info && info->fbcon_pixmap)
 		pScrn->pScreen->DestroyPixmap(info->fbcon_pixmap);
 
+	pPriv = xf86GetEntityPrivate(xf86GetEntityInfo(pScrn->entityList[pScrn->numEntities - 1])->index,
+				     gAMDGPUEntityIndex);
+	pAMDGPUEnt = pPriv->ptr;
 	if (pAMDGPUEnt->fd > 0) {
 		DevUnion *pPriv;
 		AMDGPUEntPtr pAMDGPUEnt;
