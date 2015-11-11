@@ -668,14 +668,18 @@ static void AMDGPUSetupCapabilities(ScrnInfoPtr pScrn)
 	pScrn->capabilities = 0;
 	ret = drmGetCap(pAMDGPUEnt->fd, DRM_CAP_PRIME, &value);
 	if (ret == 0) {
-		if (value & DRM_PRIME_CAP_EXPORT)
-			pScrn->capabilities |=
-			    RR_Capability_SourceOutput |
-			    RR_Capability_SinkOffload;
-		if (value & DRM_PRIME_CAP_IMPORT)
-			pScrn->capabilities |=
-			    RR_Capability_SourceOffload |
-			    RR_Capability_SinkOutput;
+		AMDGPUInfoPtr info = AMDGPUPTR(pScrn);
+
+		if (value & DRM_PRIME_CAP_EXPORT) {
+			pScrn->capabilities |= RR_Capability_SourceOutput;
+			if (info->use_glamor && info->dri2.available)
+				pScrn->capabilities |= RR_Capability_SinkOffload;
+		}
+		if (value & DRM_PRIME_CAP_IMPORT) {
+			pScrn->capabilities |= RR_Capability_SinkOutput;
+			if (info->use_glamor && info->dri2.available)
+				pScrn->capabilities |= RR_Capability_SourceOffload;
+		}
 	}
 #endif
 }
