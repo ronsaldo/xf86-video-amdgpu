@@ -186,9 +186,6 @@ AC_CHECK_HEADERS([dri3.h], [], [],
 
 CPPFLAGS="$SAVE_CPPFLAGS"
 
-PKG_CHECK_MODULES([PCIACCESS], [pciaccess >= 0.8.0])
-XORG_CFLAGS="$XORG_CFLAGS $PCIACCESS_CFLAGS"
-
 # Checks for headers/macros for byte swapping
 # Known variants:
 #	<byteswap.h> bswap_16, bswap_32, bswap_64  (glibc)
