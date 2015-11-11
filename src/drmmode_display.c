@@ -699,14 +699,15 @@ drmmode_set_mode_major(xf86CrtcPtr crtc, DisplayModePtr mode,
 				amdgpu_glamor_finish(pScrn);
 			}
 		}
-		ret =
-		    drmModeSetCrtc(pAMDGPUEnt->fd,
-				   drmmode_crtc->mode_crtc->crtc_id, fb_id, x,
-				   y, output_ids, output_count, &kmode);
-		if (ret)
+		if (drmModeSetCrtc(pAMDGPUEnt->fd,
+				   drmmode_crtc->mode_crtc->crtc_id,
+				   fb_id, x, y, output_ids,
+				   output_count, &kmode) != 0) {
 			xf86DrvMsg(crtc->scrn->scrnIndex, X_ERROR,
-				   "failed to set mode: %s", strerror(-ret));
-		else
+				   "failed to set mode: %s\n", strerror(errno));
+			ret = FALSE;
+			goto done;
+		} else
 			ret = TRUE;
 
 		if (crtc->scrn->pScreen)
