@@ -801,10 +801,27 @@ static void drmmode_show_cursor(xf86CrtcPtr crtc)
 	AMDGPUEntPtr pAMDGPUEnt = AMDGPUEntPriv(pScrn);
 	drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
 	uint32_t bo_handle;
+	static Bool use_set_cursor2 = TRUE;
 
 	if (!amdgpu_bo_get_handle(drmmode_crtc->cursor_buffer, &bo_handle)) {
 		ErrorF("failed to get BO handle for cursor\n");
 		return;
+	}
+
+	if (use_set_cursor2) {
+		xf86CrtcConfigPtr xf86_config = XF86_CRTC_CONFIG_PTR(crtc->scrn);
+		CursorPtr cursor = xf86_config->cursor;
+		int ret;
+
+		ret = drmModeSetCursor2(pAMDGPUEnt->fd,
+					drmmode_crtc->mode_crtc->crtc_id,
+					bo_handle,
+					info->cursor_w, info->cursor_h,
+					cursor->bits->xhot, cursor->bits->yhot);
+		if (ret == -EINVAL)
+			use_set_cursor2 = FALSE;
+		else
+			return;
 	}
 
 	drmModeSetCursor(pAMDGPUEnt->fd, drmmode_crtc->mode_crtc->crtc_id, bo_handle,
