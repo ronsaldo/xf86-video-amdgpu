@@ -157,6 +157,12 @@ static void *amdgpuShadowWindow(ScreenPtr screen, CARD32 row, CARD32 offset,
 	return ((uint8_t *) info->front_buffer->cpu_ptr + row * stride + offset);
 }
 
+static void
+amdgpuUpdatePacked(ScreenPtr pScreen, shadowBufPtr pBuf)
+{
+	shadowUpdatePacked(pScreen, pBuf);
+}
+
 static Bool AMDGPUCreateScreenResources_KMS(ScreenPtr pScreen)
 {
 	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
@@ -176,7 +182,7 @@ static Bool AMDGPUCreateScreenResources_KMS(ScreenPtr pScreen)
 	if (info->shadow_fb) {
 		pixmap = pScreen->GetScreenPixmap(pScreen);
 
-		if (!shadowAdd(pScreen, pixmap, shadowUpdatePackedWeak(),
+		if (!shadowAdd(pScreen, pixmap, amdgpuUpdatePacked,
 			       amdgpuShadowWindow, 0, NULL))
 			return FALSE;
 	}
