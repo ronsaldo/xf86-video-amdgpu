@@ -133,7 +133,7 @@ struct _SyncFence;
 #endif
 
 typedef enum {
-	OPTION_NOACCEL,
+	OPTION_ACCEL,
 	OPTION_SW_CURSOR,
 	OPTION_PAGE_FLIP,
 #ifdef RENDER

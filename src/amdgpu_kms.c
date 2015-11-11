@@ -60,7 +60,7 @@ extern SymTabRec AMDGPUChipsets[];
 static Bool amdgpu_setup_kernel_mem(ScreenPtr pScreen);
 
 const OptionInfoRec AMDGPUOptions_KMS[] = {
-	{OPTION_NOACCEL, "NoAccel", OPTV_BOOLEAN, {0}, FALSE},
+	{OPTION_ACCEL, "Accel", OPTV_BOOLEAN, {0}, FALSE},
 	{OPTION_SW_CURSOR, "SWcursor", OPTV_BOOLEAN, {0}, FALSE},
 	{OPTION_PAGE_FLIP, "EnablePageFlip", OPTV_BOOLEAN, {0}, FALSE},
 	{OPTION_SUBPIXEL_ORDER, "SubPixelOrder", OPTV_ANYSTR, {0}, FALSE},
@@ -562,7 +562,7 @@ static Bool AMDGPUPreInitAccel_KMS(ScrnInfoPtr pScrn)
 {
 	AMDGPUInfoPtr info = AMDGPUPTR(pScrn);
 
-	if (!xf86ReturnOptValBool(info->Options, OPTION_NOACCEL, false)) {
+	if (xf86ReturnOptValBool(info->Options, OPTION_ACCEL, TRUE)) {
 		AMDGPUEntPtr pAMDGPUEnt = AMDGPUEntPriv(pScrn);
 		Bool use_glamor = TRUE;
 #ifdef HAVE_GBM_BO_USE_LINEAR
