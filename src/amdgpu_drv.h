@@ -148,6 +148,10 @@ typedef enum {
 	OPTION_DELETE_DP12,
 } AMDGPUOpts;
 
+#if XF86_CRTC_VERSION >= 5
+#define AMDGPU_PIXMAP_SHARING 1
+#endif
+
 #define AMDGPU_VSYNC_TIMEOUT	20000	/* Maximum wait for VSYNC (in usecs) */
 
 /* Buffer are aligned on 4096 byte boundaries */
@@ -264,6 +268,10 @@ typedef struct {
 		TrapezoidsProcPtr SavedTrapezoids;
 		AddTrapsProcPtr SavedAddTraps;
 		UnrealizeGlyphProcPtr SavedUnrealizeGlyph;
+#endif
+#ifdef AMDGPU_PIXMAP_SHARING
+		SharePixmapBackingProcPtr SavedSharePixmapBacking;
+		SetSharedPixmapBackingProcPtr SavedSetSharedPixmapBacking;
 #endif
 	} glamor;
 

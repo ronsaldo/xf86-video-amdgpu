@@ -1033,6 +1033,7 @@ static Bool AMDGPUCloseScreen_KMS(CLOSE_SCREEN_ARGS_DECL)
 	if (info->dri2.enabled) {
 		amdgpu_dri2_close_screen(pScreen);
 	}
+	amdgpu_glamor_fini(pScreen);
 	pScrn->vtSema = FALSE;
 	xf86ClearPrimInitDone(info->pEnt->index);
 	pScreen->BlockHandler = info->BlockHandler;

@@ -56,10 +56,6 @@ static inline void amdgpu_set_pixmap_private(PixmapPtr pixmap,
 	dixSetPrivate(&pixmap->devPrivates, &amdgpu_pixmap_index, priv);
 }
 
-#if XF86_CRTC_VERSION >= 5
-#define AMDGPU_PIXMAP_SHARING 1
-#endif
-
 static inline void amdgpu_set_pixmap_bo(PixmapPtr pPix, struct amdgpu_buffer *bo)
 {
 	struct amdgpu_pixmap *priv;

@@ -60,6 +60,7 @@ struct amdgpu_pixmap;
 
 Bool amdgpu_glamor_pre_init(ScrnInfoPtr scrn);
 Bool amdgpu_glamor_init(ScreenPtr screen);
+void amdgpu_glamor_fini(ScreenPtr screen);
 void amdgpu_glamor_screen_init(ScreenPtr screen);
 Bool amdgpu_glamor_create_screen_resources(ScreenPtr screen);
 void amdgpu_glamor_free_screen(int scrnIndex, int flags);

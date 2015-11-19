@@ -924,8 +924,6 @@ amdgpu_glamor_close_screen(CLOSE_SCREEN_ARGS_DECL)
 	pScreen->CloseScreen = info->glamor.SavedCloseScreen;
 	pScreen->GetImage = info->glamor.SavedGetImage;
 	pScreen->GetSpans = info->glamor.SavedGetSpans;
-	pScreen->CreatePixmap = info->glamor.SavedCreatePixmap;
-	pScreen->DestroyPixmap = info->glamor.SavedDestroyPixmap;
 	pScreen->CopyWindow = info->glamor.SavedCopyWindow;
 	pScreen->ChangeWindowAttributes =
 	    info->glamor.SavedChangeWindowAttributes;
@@ -968,9 +966,6 @@ amdgpu_glamor_screen_init(ScreenPtr screen)
 
 	info->glamor.SavedGetSpans = screen->GetSpans;
 	screen->GetSpans = amdgpu_glamor_get_spans;
-
-	info->glamor.SavedCreatePixmap = screen->CreatePixmap;
-	info->glamor.SavedDestroyPixmap = screen->DestroyPixmap;
 
 	info->glamor.SavedCopyWindow = screen->CopyWindow;
 	screen->CopyWindow = amdgpu_glamor_copy_window;
