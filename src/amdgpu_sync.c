@@ -87,6 +87,13 @@ amdgpu_sync_init(ScreenPtr screen)
 	AMDGPUInfoPtr info = AMDGPUPTR(scrn);
 	SyncScreenFuncsPtr screen_funcs;
 
+	if (!xf86LoaderCheckSymbol("miSyncShmScreenInit")) {
+		xf86DrvMsg(scrn->scrnIndex, X_WARNING,
+			   "SYNC extension fences disabled because "
+			   "miSyncShmScreenInit symbol unresolved\n");
+		return FALSE;
+	}
+
 	if (!miSyncShmScreenInit(screen)) {
 		xf86DrvMsg(scrn->scrnIndex, X_WARNING,
 			   "SYNC extension fences disabled because "
