@@ -1117,6 +1117,9 @@ static void drmmode_output_dpms(xf86OutputPtr output, int mode)
 	drmModeConnectorPtr koutput = drmmode_output->mode_output;
 	AMDGPUEntPtr pAMDGPUEnt = AMDGPUEntPriv(output->scrn);
 
+	if (!koutput)
+		return;
+
 	if (mode != DPMSModeOn && crtc)
 		drmmode_do_crtc_dpms(crtc, mode);
 
