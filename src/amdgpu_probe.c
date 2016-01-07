@@ -200,11 +200,8 @@ static Bool amdgpu_get_scrninfo(int entity_num, struct pci_device *pci_dev)
 	if (!pScrn)
 		return FALSE;
 
-	if (pci_dev) {
-		if (!amdgpu_kernel_mode_enabled(pScrn, pci_dev)) {
-			return FALSE;
-		}
-	}
+	if (!amdgpu_kernel_mode_enabled(pScrn, pci_dev))
+		return FALSE;
 
 	pScrn->driverVersion = AMDGPU_VERSION_CURRENT;
 	pScrn->driverName = AMDGPU_DRIVER_NAME;
