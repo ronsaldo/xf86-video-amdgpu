@@ -80,19 +80,34 @@ static void AMDGPUIdentify(int flags)
 			  "Driver for AMD Radeon chipsets", AMDGPUChipsets);
 }
 
+static char *amdgpu_bus_id(ScrnInfoPtr pScrn, struct pci_device *dev)
+{
+	char *busid;
+
+#if XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(1,9,99,901,0)
+	XNFasprintf(&busid, "pci:%04x:%02x:%02x.%d",
+		    dev->domain, dev->bus, dev->dev, dev->func);
+#else
+	busid = XNFprintf("pci:%04x:%02x:%02x.%d",
+			  dev->domain, dev->bus, dev->dev, dev->func);
+#endif
+
+	if (!busid)
+		xf86DrvMsgVerb(pScrn->scrnIndex, X_ERROR, 0,
+			       "AMDGPU: Failed to generate bus ID string\n");
+
+	return busid;
+}
+
 static Bool amdgpu_kernel_mode_enabled(ScrnInfoPtr pScrn,
 				       struct pci_device *pci_dev)
 {
-	char *busIdString;
+	char *busIdString = amdgpu_bus_id(pScrn, pci_dev);
 	int ret;
 
-	if (!xf86LoaderCheckSymbol("DRICreatePCIBusID")) {
-		xf86DrvMsgVerb(pScrn->scrnIndex, X_INFO, 0,
-			       "[KMS] No DRICreatePCIBusID symbol, no kernel modesetting.\n");
+	if (!busIdString)
 		return FALSE;
-	}
 
-	busIdString = DRICreatePCIBusID(pci_dev);
 	ret = drmCheckModesettingSupported(busIdString);
 #if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
 	if (ret) {
@@ -127,13 +142,9 @@ static int amdgpu_kernel_open_fd(ScrnInfoPtr pScrn, struct pci_device *dev,
 	}
 #endif
 
-#if XORG_VERSION_CURRENT >= XORG_VERSION_NUMERIC(1,9,99,901,0)
-	XNFasprintf(&busid, "pci:%04x:%02x:%02x.%d",
-		    dev->domain, dev->bus, dev->dev, dev->func);
-#else
-	busid = XNFprintf("pci:%04x:%02x:%02x.%d",
-			  dev->domain, dev->bus, dev->dev, dev->func);
-#endif
+	busid = amdgpu_bus_id(pScrn, dev);
+	if (!busid)
+		return -1;
 
 	fd = drmOpen(NULL, busid);
 	if (fd == -1) {
