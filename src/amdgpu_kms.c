@@ -167,12 +167,27 @@ static Bool AMDGPUCreateScreenResources_KMS(ScreenPtr pScreen)
 {
 	ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
 	AMDGPUInfoPtr info = AMDGPUPTR(pScrn);
+	rrScrPrivPtr rrScrPriv = rrGetScrPriv(pScreen);
 	PixmapPtr pixmap;
 
 	pScreen->CreateScreenResources = info->CreateScreenResources;
 	if (!(*pScreen->CreateScreenResources) (pScreen))
 		return FALSE;
 	pScreen->CreateScreenResources = AMDGPUCreateScreenResources_KMS;
+
+	/* Set the RandR primary output if Xorg hasn't */
+	if (
+#ifdef AMDGPU_PIXMAP_SHARING
+	    !pScreen->isGPU &&
+#endif
+	    !rrScrPriv->primaryOutput)
+	{
+		xf86CrtcConfigPtr xf86_config = XF86_CRTC_CONFIG_PTR(pScrn);
+
+		rrScrPriv->primaryOutput = xf86_config->output[0]->randr_output;
+		RROutputChanged(rrScrPriv->primaryOutput, FALSE);
+		rrScrPriv->layoutChanged = TRUE;
+	}
 
 	if (!drmmode_set_desired_modes(pScrn, &info->drmmode, pScrn->is_gpu))
 		return FALSE;
