@@ -243,9 +243,9 @@ void amdgpu_bo_unref(struct amdgpu_buffer **buffer)
 int amdgpu_query_bo_size(amdgpu_bo_handle buf_handle, uint32_t *size)
 {
 	struct amdgpu_bo_info buffer_info;
-	memset(&buffer_info, 0, sizeof(struct amdgpu_bo_info));
 	int ret;
 
+	memset(&buffer_info, 0, sizeof(struct amdgpu_bo_info));
 	ret = amdgpu_bo_query_info(buf_handle, &buffer_info);
 	if (ret)
 		*size = 0;
@@ -261,9 +261,9 @@ int amdgpu_query_heap_size(amdgpu_device_handle pDev,
 			    uint64_t *max_allocation)
 {
 	struct amdgpu_heap_info heap_info;
-	memset(&heap_info, 0, sizeof(struct amdgpu_heap_info));
 	int ret;
 
+	memset(&heap_info, 0, sizeof(struct amdgpu_heap_info));
 	ret = amdgpu_query_heap_info(pDev, heap, 0, &heap_info);
 	if (ret) {
 		*heap_size = 0;
