@@ -1741,7 +1741,7 @@ static Bool drmmode_xf86crtc_resize(ScrnInfoPtr scrn, int width, int height)
 		goto fail;
 	}
 
-	if (amdgpu_bo_map(scrn, info->front_buffer)) {
+	if (!info->use_glamor && amdgpu_bo_map(scrn, info->front_buffer) != 0) {
 		xf86DrvMsg(scrn->scrnIndex, X_ERROR,
 			   "Failed to map front buffer memory\n");
 		goto fail;
